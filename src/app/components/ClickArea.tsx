@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatNumber } from "../lib/gameLogic";
-import Skyline from "./Skyline";
+import PixelCity from "./PixelCity";
 
 type Props = {
   owned: Record<string, number>;
@@ -99,10 +99,8 @@ export default function ClickArea({
       {/* 地平線あたりの陽だまり */}
       <div className="daylight from-brick/15 pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent" />
 
-      <Skyline owned={owned} />
-
-      {/* 地面 */}
-      <div className="bg-ground pointer-events-none absolute inset-x-0 bottom-0 h-2" />
+      {/* 地面・道路・街路樹まで canvas 側で描く */}
+      <PixelCity owned={owned} />
 
       {/*
         着工ゲージ。背の高いビルと重なると読めなくなるので、

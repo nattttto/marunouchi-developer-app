@@ -18,6 +18,16 @@
   --color-sky-low: #e8dfd0;
   --color-ground: #cfc3ae;
 
+  /* 街の描画用。canvas からは getComputedStyle で読むので、色はここに集約したまま */
+  --color-road: #b9ad97;
+  --color-road-line: #e4dbc8;
+  --color-sidewalk: #c6baa4;
+  --color-tree: #6e8f72;
+  --color-tree-light: #7fa080;
+  --color-trunk: #8a7a5e;
+  --color-lamp: #918977;
+  --color-lamp-head: #c2a05e;
+
   --color-line: #e5ded2;
   --color-line-strong: #d6cbb9;
 
