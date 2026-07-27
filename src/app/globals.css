@@ -25,36 +25,6 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* --- クレーンのアニメーション --------------------------------- */
-
-@keyframes crane-swing {
-  0%,
-  100% {
-    transform: rotate(-2.2deg);
-  }
-  50% {
-    transform: rotate(2.2deg);
-  }
-}
-
-@keyframes crane-hoist {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-16px);
-  }
-}
-
-.crane-jib {
-  animation: crane-swing 5s ease-in-out infinite;
-}
-
-.crane-hook {
-  animation: crane-hoist 2.6s ease-in-out infinite;
-}
-
 /* --- クリック時のフローティングテキスト ------------------------ */
 
 @keyframes float-up {
@@ -92,8 +62,6 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .crane-jib,
-  .crane-hook,
   .skyline-glow {
     animation: none;
   }
