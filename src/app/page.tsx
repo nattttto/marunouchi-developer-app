@@ -22,6 +22,9 @@ export default function Home() {
     categoryCounts,
     categoryMultipliers,
     groupMultiplier,
+    clickPower,
+    groundworkGoal,
+    completionBonus,
     click,
     buy,
     reset,
@@ -61,7 +64,10 @@ export default function Home() {
       <div className="relative flex shrink-0 basis-[36dvh] flex-col">
         <ClickArea
           owned={state.owned}
-          clickPower={state.clickPower}
+          clickPower={clickPower}
+          groundworkClicks={state.groundworkClicks}
+          groundworkGoal={groundworkGoal}
+          completionBonus={completionBonus}
           onClick={click}
         />
 
@@ -88,6 +94,7 @@ export default function Home() {
           state={state}
           totalRate={totalRate}
           groupMultiplier={groupMultiplier}
+          clickPower={clickPower}
           onReset={reset}
           onClose={() => setSettingsOpen(false)}
           onDevGrantAll={devGrantAll}

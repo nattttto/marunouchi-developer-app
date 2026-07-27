@@ -20,6 +20,7 @@ type Props = {
   state: GameState;
   totalRate: number;
   groupMultiplier: number;
+  clickPower: number;
   onReset: () => void;
   onClose: () => void;
   onDevGrantAll: () => void;
@@ -31,6 +32,7 @@ export default function SettingsModal({
   state,
   totalRate,
   groupMultiplier,
+  clickPower,
   onReset,
   onClose,
   onDevGrantAll,
@@ -74,13 +76,18 @@ export default function SettingsModal({
             label="グループシナジー"
             value={`×${formatMultiplier(groupMultiplier)}`}
           />
-          <Stat label="1クリック" value={`${state.clickPower} PT`} />
+          <Stat label="1タップ" value={`${formatNumber(clickPower)} PT`} />
+          <Stat label="竣工回数" value={`${state.completions} 回`} />
         </dl>
 
         <div className="mt-5 space-y-2 rounded-lg bg-white/5 p-3 text-xs leading-relaxed text-slate-400">
           <p>
             同じカテゴリを増やすとそのカテゴリの生産量が上がり、扱うカテゴリの種類が
             増えると全体の生産量が上がります。一点集中よりも多角化のほうが伸びます。
+          </p>
+          <p>
+            1タップの獲得量は秒間収益に連動して増えます。タップを重ねると着工ゲージが
+            溜まり、満たすたびに竣工ボーナスが入ります。
           </p>
           <p>
             進行状況はこのブラウザに自動保存されます。離脱中も
