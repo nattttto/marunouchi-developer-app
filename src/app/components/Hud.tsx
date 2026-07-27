@@ -1,20 +1,23 @@
 "use client";
 
 import { Settings } from "lucide-react";
-import { formatNumber } from "../lib/gameLogic";
+import { formatMultiplier, formatNumber } from "../lib/gameLogic";
 
 type Props = {
   points: number;
   totalRate: number;
   developmentRate: number;
+  /** カテゴリの種類数から決まる全体倍率。1 のときは表示しない */
+  groupMultiplier: number;
   onOpenSettings: () => void;
 };
 
-/** 画面上部の常時表示ヘッダー。所持PT・秒間収益・開発率 */
+/** 画面上部の常時表示ヘッダー。所持PT・秒間収益・グループ展開率 */
 export default function Hud({
   points,
   totalRate,
   developmentRate,
+  groupMultiplier,
   onOpenSettings,
 }: Props) {
   const percent = developmentRate * 100;
@@ -28,13 +31,18 @@ export default function Hud({
             {formatNumber(points)}
             <span className="ml-1 text-base font-medium text-amber-200/70">PT</span>
           </p>
-          <p className="tabular text-xs text-slate-400">
+          <p className="tabular truncate text-xs text-slate-400">
             毎秒 <span className="text-slate-200">{formatNumber(totalRate)}</span> PT
+            {groupMultiplier > 1 && (
+              <span className="ml-1.5 text-sky-300">
+                シナジー ×{formatMultiplier(groupMultiplier)}
+              </span>
+            )}
           </p>
         </div>
 
         <div className="w-28 shrink-0 text-right">
-          <p className="text-[11px] tracking-widest text-slate-400">丸の内開発率</p>
+          <p className="text-[11px] tracking-widest text-slate-400">グループ展開率</p>
           <p className="tabular text-lg font-semibold text-sky-300">
             {percent.toFixed(1)}%
           </p>

@@ -2,13 +2,20 @@
 
 import { useState } from "react";
 import { X } from "lucide-react";
-import { formatDuration, formatNumber } from "../lib/gameLogic";
+import {
+  formatDuration,
+  formatMultiplier,
+  formatNumber,
+  getOwnedCategoryKinds,
+} from "../lib/gameLogic";
+import { CATEGORIES } from "../lib/assets";
 import { MAX_OFFLINE_SECONDS } from "../lib/saveData";
 import type { GameState } from "../lib/types";
 
 type Props = {
   state: GameState;
   totalRate: number;
+  groupMultiplier: number;
   onReset: () => void;
   onClose: () => void;
 };
@@ -17,12 +24,14 @@ type Props = {
 export default function SettingsModal({
   state,
   totalRate,
+  groupMultiplier,
   onReset,
   onClose,
 }: Props) {
   const [confirming, setConfirming] = useState(false);
 
-  const totalBuildings = Object.values(state.owned).reduce((a, b) => a + b, 0);
+  const totalAssets = Object.values(state.owned).reduce((a, b) => a + b, 0);
+  const categoryKinds = getOwnedCategoryKinds(state.owned);
 
   const handleReset = () => {
     onReset();
@@ -48,14 +57,28 @@ export default function SettingsModal({
         <dl className="mt-5 space-y-2 text-sm">
           <Stat label="累計獲得PT" value={`${formatNumber(state.totalEarned)} PT`} />
           <Stat label="秒間収益" value={`${formatNumber(totalRate)} PT/s`} />
-          <Stat label="保有ビル数" value={`${totalBuildings} 棟`} />
+          <Stat label="保有事業数" value={`${totalAssets} 件`} />
+          <Stat
+            label="展開カテゴリ"
+            value={`${categoryKinds} / ${CATEGORIES.length} 種`}
+          />
+          <Stat
+            label="グループシナジー"
+            value={`×${formatMultiplier(groupMultiplier)}`}
+          />
           <Stat label="1クリック" value={`${state.clickPower} PT`} />
         </dl>
 
-        <p className="mt-5 rounded-lg bg-white/5 p-3 text-xs leading-relaxed text-slate-400">
-          進行状況はこのブラウザに自動保存されます。離脱中も
-          {formatDuration(MAX_OFFLINE_SECONDS)}ぶんまで収益が貯まります。
-        </p>
+        <div className="mt-5 space-y-2 rounded-lg bg-white/5 p-3 text-xs leading-relaxed text-slate-400">
+          <p>
+            同じカテゴリを増やすとそのカテゴリの生産量が上がり、扱うカテゴリの種類が
+            増えると全体の生産量が上がります。一点集中よりも多角化のほうが伸びます。
+          </p>
+          <p>
+            進行状況はこのブラウザに自動保存されます。離脱中も
+            {formatDuration(MAX_OFFLINE_SECONDS)}ぶんまで収益が貯まります。
+          </p>
+        </div>
 
         {confirming ? (
           <div className="mt-5 rounded-xl border border-rose-500/40 bg-rose-500/10 p-4">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import CategoryStrip from "./components/CategoryStrip";
 import ClickArea from "./components/ClickArea";
 import Hud from "./components/Hud";
 import OfflineModal from "./components/OfflineModal";
@@ -13,10 +14,14 @@ export default function Home() {
   const {
     state,
     loaded,
+    offline,
     totalRate,
     costs,
     unlocked,
-    offline,
+    effectiveProduction,
+    categoryCounts,
+    categoryMultipliers,
+    groupMultiplier,
     click,
     buy,
     reset,
@@ -42,10 +47,16 @@ export default function Home() {
         points={state.points}
         totalRate={totalRate}
         developmentRate={developmentRate}
+        groupMultiplier={groupMultiplier}
         onOpenSettings={() => setSettingsOpen(true)}
       />
 
-      <div className="relative flex shrink-0 basis-[42dvh] flex-col">
+      <CategoryStrip
+        categoryCounts={categoryCounts}
+        categoryMultipliers={categoryMultipliers}
+      />
+
+      <div className="relative flex shrink-0 basis-[36dvh] flex-col">
         <ClickArea
           owned={state.owned}
           clickPower={state.clickPower}
@@ -54,7 +65,7 @@ export default function Home() {
 
         {developmentRate >= 1 && (
           <p className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-lg font-bold tracking-wider text-amber-300 drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
-            丸の内エリア開発率 100%
+            グループ展開率 100%
           </p>
         )}
       </div>
@@ -64,6 +75,7 @@ export default function Home() {
         owned={state.owned}
         costs={costs}
         unlocked={unlocked}
+        effectiveProduction={effectiveProduction}
         onBuy={buy}
       />
 
@@ -73,6 +85,7 @@ export default function Home() {
         <SettingsModal
           state={state}
           totalRate={totalRate}
+          groupMultiplier={groupMultiplier}
           onReset={reset}
           onClose={() => setSettingsOpen(false)}
         />
