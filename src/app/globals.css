@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-noto-sans-jp);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  color: #e8eef8;
+  background: #070c18;
+  overscroll-behavior: none;
+  /* クリック連打でテキストが選択されたり、二重タップで拡大されたりするのを防ぐ */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* 数字がガタつかないよう桁幅を固定する */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- クレーンのアニメーション --------------------------------- */
+
+@keyframes crane-swing {
+  0%,
+  100% {
+    transform: rotate(-2.2deg);
+  }
+  50% {
+    transform: rotate(2.2deg);
+  }
+}
+
+@keyframes crane-hoist {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-16px);
+  }
+}
+
+.crane-jib {
+  animation: crane-swing 5s ease-in-out infinite;
+}
+
+.crane-hook {
+  animation: crane-hoist 2.6s ease-in-out infinite;
+}
+
+/* --- クリック時のフローティングテキスト ------------------------ */
+
+@keyframes float-up {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(0.9);
+  }
+  20% {
+    transform: translate(-50%, -12px) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -84px) scale(1);
+  }
+}
+
+.float-up {
+  animation: float-up 0.9s ease-out forwards;
+}
+
+/* --- 建設中の光の明滅 ----------------------------------------- */
+
+@keyframes skyline-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.skyline-glow {
+  animation: skyline-glow 6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crane-jib,
+  .crane-hook,
+  .skyline-glow {
+    animation: none;
+  }
+  .float-up {
+    animation-duration: 0.4s;
+  }
+}
