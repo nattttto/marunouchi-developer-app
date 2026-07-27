@@ -9,8 +9,12 @@ import {
   getOwnedCategoryKinds,
 } from "../lib/gameLogic";
 import { CATEGORIES } from "../lib/assets";
+import { IS_DEV } from "../lib/env";
 import { MAX_OFFLINE_SECONDS } from "../lib/saveData";
 import type { GameState } from "../lib/types";
+
+/** 開発用「PT追加」ボタンで一度に足す量 */
+const DEV_POINTS_GRANT = 1e12;
 
 type Props = {
   state: GameState;
@@ -18,6 +22,8 @@ type Props = {
   groupMultiplier: number;
   onReset: () => void;
   onClose: () => void;
+  onDevGrantAll: () => void;
+  onDevGrantPoints: (points: number) => void;
 };
 
 /** 設定メニュー。累計の確認と「最初からやり直す」 */
@@ -27,6 +33,8 @@ export default function SettingsModal({
   groupMultiplier,
   onReset,
   onClose,
+  onDevGrantAll,
+  onDevGrantPoints,
 }: Props) {
   const [confirming, setConfirming] = useState(false);
 
@@ -79,6 +87,35 @@ export default function SettingsModal({
             {formatDuration(MAX_OFFLINE_SECONDS)}ぶんまで収益が貯まります。
           </p>
         </div>
+
+        {/* 開発用。本番ビルドでは IS_DEV が false になりこのブロックごと落ちる */}
+        {IS_DEV && (
+          <div className="mt-5 rounded-xl border border-dashed border-sky-400/40 p-3">
+            <p className="text-[10px] font-bold tracking-widest text-sky-300">
+              DEV ONLY
+            </p>
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={onDevGrantAll}
+                className="flex-1 cursor-pointer rounded-lg border border-sky-400/40 py-2 text-xs text-sky-200 transition-colors hover:bg-sky-400/10"
+              >
+                全事業 +1（無料・解放）
+              </button>
+              <button
+                type="button"
+                onClick={() => onDevGrantPoints(DEV_POINTS_GRANT)}
+                className="flex-1 cursor-pointer rounded-lg border border-sky-400/40 py-2 text-xs text-sky-200 transition-colors hover:bg-sky-400/10"
+              >
+                PT +{formatNumber(DEV_POINTS_GRANT)}
+              </button>
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
+              「全事業 +1」はコストと解放条件を無視して全21事業を1件ずつ増やします。
+              押した回数ぶん積めるので、倍率のしきい値やスカイラインの確認に使えます。
+            </p>
+          </div>
+        )}
 
         {confirming ? (
           <div className="mt-5 rounded-xl border border-rose-500/40 bg-rose-500/10 p-4">

@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { ASSETS, ASSET_MAP } from "../lib/assets";
+import { IS_DEV } from "../lib/env";
 import {
   getCategoryCounts,
   getCategoryMultipliers,
@@ -40,6 +41,7 @@ type Action =
   | { type: "buy"; assetId: string }
   | { type: "tick"; seconds: number }
   | { type: "grant"; points: number }
+  | { type: "devGrantAll" }
   | { type: "reset" };
 
 /** 状態遷移はすべてここ。副作用を持たない純粋関数 */
@@ -86,6 +88,19 @@ function reducer(state: GameState, action: Action): GameState {
         points: state.points - cost,
         owned: { ...state.owned, [asset.id]: count + 1 },
       };
+    }
+
+    /**
+     * 開発用。全事業を1件ずつ、コストも解放条件も無視して増やす。
+     * 1回押せば全事業が解放され、押した回数ぶん保有数が積める
+     * （倍率のしきい値やスカイラインの描画を確認するため）。
+     */
+    case "devGrantAll": {
+      const owned = { ...state.owned };
+      for (const asset of ASSETS) {
+        owned[asset.id] = (owned[asset.id] ?? 0) + 1;
+      }
+      return { ...state, owned };
     }
 
     case "reset":
@@ -202,6 +217,17 @@ export function useGame() {
 
   const dismissOffline = useCallback(() => setOffline(null), []);
 
+  // 開発用。本番では呼ばれても何もしない（ボタン自体も描画されない）
+  const devGrantAll = useCallback(() => {
+    if (!IS_DEV) return;
+    dispatch({ type: "devGrantAll" });
+  }, []);
+
+  const devGrantPoints = useCallback((points: number) => {
+    if (!IS_DEV) return;
+    dispatch({ type: "grant", points });
+  }, []);
+
   return {
     state,
     loaded,
@@ -211,5 +237,7 @@ export function useGame() {
     buy,
     reset,
     dismissOffline,
+    devGrantAll,
+    devGrantPoints,
   };
 }

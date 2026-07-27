@@ -26,6 +26,8 @@ export default function Home() {
     buy,
     reset,
     dismissOffline,
+    devGrantAll,
+    devGrantPoints,
   } = useGame();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -88,6 +90,8 @@ export default function Home() {
           groupMultiplier={groupMultiplier}
           onReset={reset}
           onClose={() => setSettingsOpen(false)}
+          onDevGrantAll={devGrantAll}
+          onDevGrantPoints={devGrantPoints}
         />
       )}
     </main>
