@@ -54,12 +54,11 @@
 }
 
 /*
-  next/font の変数は <body> に付くため、:root で値を解決する通常の @theme では
-  参照できずフォールバックしてしまう。`inline` は var() をそのまま出力するので
-  body 上で解決される。フォント指定だけこちらに置くこと。
+  フォントは public/fonts に自前ホストした @font-face（layout.tsx が読み込む）。
+  next/font は使っていないので、ここは実体のフォント名をそのまま書く。
 */
-@theme inline {
-  --font-sans: var(--font-zen-maru);
+@theme {
+  --font-sans: "Zen Maru Gothic", ui-sans-serif, system-ui, sans-serif;
 }
 
 html,
@@ -68,12 +67,7 @@ body {
 }
 
 body {
-  /*
-    next/font の変数は <body> に付くので、font-family も body で指定する。
-    :root 側（Tailwind の preflight）で解決させようとすると変数が未定義になり、
-    system フォントにフォールバックしてしまう。
-  */
-  font-family: var(--font-zen-maru), ui-sans-serif, system-ui, sans-serif;
+  font-family: "Zen Maru Gothic", ui-sans-serif, system-ui, sans-serif;
   color: var(--color-ink);
   background: var(--color-canvas);
   overscroll-behavior: none;

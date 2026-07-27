@@ -240,12 +240,38 @@ PT・コスト・ゲージ）とセージ（`sage`＝副アクセント。展開
 明るい地の上でコントラスト比 4.5:1 を確保できる明度にしてある。`ink-mute` も同様に
 10〜11px のラベルで AA を満たす `#736c5e` に留めてあるので、これ以上明るくしないこと。
 
-**フォントは `body` で指定する。** next/font の変数は `<body>` に付くため、
-`:root` で解決される通常の `@theme` からは参照できず system フォントに落ちる。
-`@theme inline` も `font-sans` ユーティリティを直すだけで body には継承されない（実際に踏んだ）。
+### フォント（自前ホスト。next/font は使わない）
 
-日本語フォントはウェイトごとにサブセットが増えて重くなる。Zen Maru Gothic は
-実際に使う 400 と 700 だけ読み込んでいる（3ウェイトだと CSS が 94.5kB、2ウェイトで 63.1kB）。
+Zen Maru Gothic は `public/fonts/zen-maru-gothic/` に woff2 を置き、
+`public/fonts/zen-maru-gothic.css` の `@font-face` から参照している。
+`layout.tsx` が `<link rel="stylesheet">` で読む。
+
+**`next/font/google` に戻してはいけない。** 日本語フォントは unicode-range ごとに
+244 個のスライスに分割されており、`next/font/google` はビルド時にその全部を
+fonts.gstatic.com へ取りに行く。Vercel のビルドで 78 件が取得に失敗し、
+Turbopack が `Module not found: '@vercel/turbopack-next/internal/font/google/font'`
+として落とした（レート制限とみられる）。再試行しても再発した。
+自前ホストにしてビルドを外部非依存にするのが唯一の恒久対策だった。
+
+`import` せず `<link>` で読むのも意図的。この CSS は 212KB あり内容が変わらないので、
+アプリの CSS バンドルに混ぜると更新のたびに再ダウンロードさせることになる。
+別ファイルなら長期キャッシュが効く。ESLint の `@next/next/no-css-tags` は
+この理由で個別に抑制してある。
+
+ブラウザは 244 個すべてではなく、使っている文字を含むスライスだけ取得する
+（実測で 33 ファイル・407KB。next/font のときと同じ挙動）。
+
+**再生成手順**（ウェイトを変える・フォントを差し替えるとき）:
+
+1. `https://fonts.googleapis.com/css2?family=...&display=swap` を
+   **モダンブラウザの User-Agent で**取得する（UA を偽装しないと woff2 が返らない）
+2. CSS 中の `https://fonts.gstatic.com/s/<family>/<version>/` を
+   `/fonts/<family>/` へ置換し、`public/fonts/<family>.css` として保存
+3. 元の URL の woff2 をすべて `public/fonts/<family>/` へダウンロード
+4. ライセンス（OFL）を同じディレクトリに置く。再配布にあたるので必須
+
+日本語フォントはウェイトごとにスライスが増える。Zen Maru Gothic は実際に使う
+400 と 700 だけにしてある。`font-medium`(500) を使うとフォールバックするので注意。
 
 `Asset.color` はカテゴリごとに色系統を揃えてある（オフィス=青灰、商業・ホテル=テラコッタ、
 住宅=セージ、インフラ=石、設計・サービス=藤、海外=真鍮）。スカイラインを見てどの事業が
