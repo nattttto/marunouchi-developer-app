@@ -1,7 +1,55 @@
 @import "tailwindcss";
 
+/*
+  配色はここに集約する。各コンポーネントで色を直書きしない。
+  Tailwind v4 の @theme に置くので `bg-canvas` `text-ink` のように
+  ユーティリティクラスとして使える。テーマを変えるときはこの表だけ差し替える。
+
+  「ソフトライト」= 生成りの地に、テラコッタ（主アクセント）とセージ（副アクセント）。
+*/
+@theme {
+  --color-canvas: #f7f3ec;
+  --color-surface: #ffffff;
+  --color-surface-alt: #fdfbf7;
+
+  /* 着工エリア。上が空、下へ向かって地面の色に寄せる */
+  --color-sky-top: #e9eff2;
+  --color-sky-mid: #f0eadf;
+  --color-sky-low: #e8dfd0;
+  --color-ground: #cfc3ae;
+
+  --color-line: #e5ded2;
+  --color-line-strong: #d6cbb9;
+
+  /*
+    ink-mute は 10〜11px のラベルにも使うので、一番暗い canvas(#f7f3ec) の上でも
+    コントラスト比 4.5:1 を満たす明度に留めてある（#736c5e で 4.7:1）。
+    これ以上明るくすると小さい文字が AA を割る。
+  */
+  --color-ink: #4a4640;
+  --color-ink-soft: #6e675e;
+  --color-ink-mute: #736c5e;
+
+  /* テラコッタ。brick は塗り用、brick-ink は小さい文字用（コントラスト確保） */
+  --color-brick: #c0684d;
+  --color-brick-ink: #9c4a32;
+  --color-brick-soft: #efd9cf;
+
+  /* セージ。展開率やシナジーなど「伸びている」ことを示す側 */
+  --color-sage: #7a9e7e;
+  --color-sage-ink: #4f7355;
+
+  --color-danger: #b5544a;
+  --color-danger-ink: #8e3c34;
+}
+
+/*
+  next/font の変数は <body> に付くため、:root で値を解決する通常の @theme では
+  参照できずフォールバックしてしまう。`inline` は var() をそのまま出力するので
+  body 上で解決される。フォント指定だけこちらに置くこと。
+*/
 @theme inline {
-  --font-sans: var(--font-noto-sans-jp);
+  --font-sans: var(--font-zen-maru);
 }
 
 html,
@@ -10,8 +58,14 @@ body {
 }
 
 body {
-  color: #e8eef8;
-  background: #070c18;
+  /*
+    next/font の変数は <body> に付くので、font-family も body で指定する。
+    :root 側（Tailwind の preflight）で解決させようとすると変数が未定義になり、
+    system フォントにフォールバックしてしまう。
+  */
+  font-family: var(--font-zen-maru), ui-sans-serif, system-ui, sans-serif;
+  color: var(--color-ink);
+  background: var(--color-canvas);
   overscroll-behavior: none;
   /* クリック連打でテキストが選択されたり、二重タップで拡大されたりするのを防ぐ */
   -webkit-user-select: none;
@@ -45,24 +99,24 @@ body {
   animation: float-up 0.9s ease-out forwards;
 }
 
-/* --- 建設中の光の明滅 ----------------------------------------- */
+/* --- 地平線あたりの陽の揺らぎ ---------------------------------- */
 
-@keyframes skyline-glow {
+@keyframes daylight {
   0%,
   100% {
-    opacity: 0.55;
+    opacity: 0.45;
   }
   50% {
-    opacity: 0.85;
+    opacity: 0.7;
   }
 }
 
-.skyline-glow {
-  animation: skyline-glow 6s ease-in-out infinite;
+.daylight {
+  animation: daylight 8s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .skyline-glow {
+  .daylight {
     animation: none;
   }
   .float-up {

@@ -1,9 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Sans_JP } from "next/font/google";
+import { Zen_Maru_Gothic } from "next/font/google";
 import "./globals.css";
 
-const notoSansJp = Noto_Sans_JP({
-  variable: "--font-noto-sans-jp",
+// 角の丸いゴシック。生成りの配色とあわせて全体の当たりを柔らかくする。
+// 日本語フォントはウェイトごとにサブセットが増えて重いので、実際に使う2種だけ読む。
+const zenMaruGothic = Zen_Maru_Gothic({
+  variable: "--font-zen-maru",
+  weight: ["400", "700"],
   subsets: ["latin"],
   display: "swap",
 });
@@ -15,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#070c18",
+  themeColor: "#f7f3ec",
   // 連打時の意図しないピンチズームを防ぐ
   maximumScale: 1,
 };
@@ -27,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body className={`${notoSansJp.variable} antialiased`}>{children}</body>
+      <body className={`${zenMaruGothic.variable} antialiased`}>{children}</body>
     </html>
   );
 }
