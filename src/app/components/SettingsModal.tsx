@@ -50,15 +50,15 @@ export default function SettingsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#101a33] p-6 shadow-2xl">
+    <div className="bg-ink/35 fixed inset-0 z-50 flex items-center justify-center p-6 backdrop-blur-sm">
+      <div className="border-line bg-surface w-full max-w-sm rounded-2xl border p-6 shadow-xl">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-slate-100">設定</h2>
+          <h2 className="text-ink text-base font-bold">設定</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="閉じる"
-            className="cursor-pointer rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+            className="text-ink-mute hover:bg-canvas hover:text-ink cursor-pointer rounded-lg p-1.5 transition-colors"
           >
             <X size={18} />
           </button>
@@ -80,7 +80,7 @@ export default function SettingsModal({
           <Stat label="竣工回数" value={`${state.completions} 回`} />
         </dl>
 
-        <div className="mt-5 space-y-2 rounded-lg bg-white/5 p-3 text-xs leading-relaxed text-slate-400">
+        <div className="bg-canvas text-ink-soft mt-5 space-y-2 rounded-lg p-3 text-xs leading-relaxed">
           <p>
             同じカテゴリを増やすとそのカテゴリの生産量が上がり、扱うカテゴリの種類が
             増えると全体の生産量が上がります。一点集中よりも多角化のほうが伸びます。
@@ -97,27 +97,27 @@ export default function SettingsModal({
 
         {/* 開発用。本番ビルドでは IS_DEV が false になりこのブロックごと落ちる */}
         {IS_DEV && (
-          <div className="mt-5 rounded-xl border border-dashed border-sky-400/40 p-3">
-            <p className="text-[10px] font-bold tracking-widest text-sky-300">
+          <div className="border-sage/60 mt-5 rounded-xl border border-dashed p-3">
+            <p className="text-sage-ink text-[10px] font-bold tracking-widest">
               DEV ONLY
             </p>
             <div className="mt-2 flex gap-2">
               <button
                 type="button"
                 onClick={onDevGrantAll}
-                className="flex-1 cursor-pointer rounded-lg border border-sky-400/40 py-2 text-xs text-sky-200 transition-colors hover:bg-sky-400/10"
+                className="border-sage/60 text-sage-ink hover:bg-sage/10 flex-1 cursor-pointer rounded-lg border py-2 text-xs transition-colors"
               >
                 全事業 +1（無料・解放）
               </button>
               <button
                 type="button"
                 onClick={() => onDevGrantPoints(DEV_POINTS_GRANT)}
-                className="flex-1 cursor-pointer rounded-lg border border-sky-400/40 py-2 text-xs text-sky-200 transition-colors hover:bg-sky-400/10"
+                className="border-sage/60 text-sage-ink hover:bg-sage/10 flex-1 cursor-pointer rounded-lg border py-2 text-xs transition-colors"
               >
                 PT +{formatNumber(DEV_POINTS_GRANT)}
               </button>
             </div>
-            <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
+            <p className="text-ink-mute mt-2 text-[11px] leading-relaxed">
               「全事業 +1」はコストと解放条件を無視して全21事業を1件ずつ増やします。
               押した回数ぶん積めるので、倍率のしきい値やスカイラインの確認に使えます。
             </p>
@@ -125,22 +125,22 @@ export default function SettingsModal({
         )}
 
         {confirming ? (
-          <div className="mt-5 rounded-xl border border-rose-500/40 bg-rose-500/10 p-4">
-            <p className="text-sm text-rose-200">
+          <div className="border-danger/40 bg-danger/8 mt-5 rounded-xl border p-4">
+            <p className="text-danger-ink text-sm">
               保存データをすべて消して最初からやり直します。元に戻せません。
             </p>
             <div className="mt-3 flex gap-2">
               <button
                 type="button"
                 onClick={() => setConfirming(false)}
-                className="flex-1 cursor-pointer rounded-lg border border-white/15 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10"
+                className="border-line-strong text-ink-soft hover:bg-canvas flex-1 cursor-pointer rounded-lg border py-2 text-sm transition-colors"
               >
                 やめる
               </button>
               <button
                 type="button"
                 onClick={handleReset}
-                className="flex-1 cursor-pointer rounded-lg bg-rose-500 py-2 text-sm font-bold text-white transition-colors hover:bg-rose-400"
+                className="bg-danger hover:bg-danger-ink flex-1 cursor-pointer rounded-lg py-2 text-sm font-bold text-white transition-colors"
               >
                 リセットする
               </button>
@@ -150,7 +150,7 @@ export default function SettingsModal({
           <button
             type="button"
             onClick={() => setConfirming(true)}
-            className="mt-5 w-full cursor-pointer rounded-xl border border-rose-500/40 py-3 text-sm font-semibold text-rose-300 transition-colors hover:bg-rose-500/10"
+            className="border-danger/40 text-danger-ink hover:bg-danger/8 mt-5 w-full cursor-pointer rounded-xl border py-3 text-sm font-bold transition-colors"
           >
             最初からやり直す
           </button>
@@ -163,8 +163,8 @@ export default function SettingsModal({
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <dt className="text-slate-400">{label}</dt>
-      <dd className="tabular font-semibold text-slate-100">{value}</dd>
+      <dt className="text-ink-mute">{label}</dt>
+      <dd className="tabular text-ink font-bold">{value}</dd>
     </div>
   );
 }

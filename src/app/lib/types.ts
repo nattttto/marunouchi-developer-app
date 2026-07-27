@@ -23,10 +23,12 @@ export type Category = {
 };
 
 /**
- * スカイラインでの描き方。
- * `none` はCM事業や投資マネジメントのような無形の事業で、収益だけ生んで描画されない。
+ * 街での描き方。
+ *
+ * 無形の事業（CM事業・設計・PM）も低層の事務所として描く。
+ * 「買ったのに街に何も現れない」のは達成感を削ぐので、描かない事業は作らない。
  */
-export type AssetShape = "tower" | "midrise" | "lowrise" | "airport" | "none";
+export type AssetShape = "tower" | "midrise" | "lowrise" | "airport";
 
 /** 保有できる事業・施設1種類ぶんの静的データ（定数。実行中に変化しない） */
 export type Asset = {
@@ -42,13 +44,13 @@ export type Asset = {
   costMultiplier: number;
   /** 1件あたりの生産量(PT/s)。倍率がかかる前の素の値 */
   baseProduction: number;
-  /** スカイラインでの描き方 */
+  /** 街での描き方 */
   shape: AssetShape;
-  /** スウォッチとスカイラインに使う色 */
+  /** スウォッチと街の描画に使う色 */
   color: string;
-  /** スカイライン描画時の高さ比（0〜1。エリア高さに対する割合） */
+  /** 街での高さ比（0〜1。1 が一番高い事業） */
   heightRatio: number;
-  /** スカイライン描画時の幅比（1.0 = 基準幅） */
+  /** 街での幅比（1.0 = 基準幅） */
   widthRatio: number;
   /** 解放条件。未指定なら最初から解放 */
   unlockRequirement?: {

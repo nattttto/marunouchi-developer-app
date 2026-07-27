@@ -25,8 +25,8 @@ export default function Shop({
   onBuy,
 }: Props) {
   return (
-    <section className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#080e1c]">
-      <ul className="mx-auto w-full max-w-2xl divide-y divide-white/5">
+    <section className="bg-surface-alt min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <ul className="divide-line mx-auto w-full max-w-2xl divide-y">
         {ASSETS.map((asset) => (
           <ShopRow
             key={asset.id}
@@ -75,26 +75,37 @@ function ShopRow({
         className={[
           "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors",
           affordable
-            ? "cursor-pointer hover:bg-white/5 active:bg-white/10"
+            ? "hover:bg-canvas active:bg-line/60 cursor-pointer"
             : "cursor-not-allowed opacity-45",
         ].join(" ")}
       >
-        {/* 色スウォッチ。保有数を兼ねる */}
+        {/*
+          色スウォッチ。保有数を兼ねる。
+          明るい地では事業色をそのまま敷くと白抜き文字が読めないので、
+          color-mix で淡い塗り・濃い文字に振り分けてコントラストを確保する。
+        */}
         <span
-          className="flex size-11 shrink-0 items-center justify-center rounded-md"
-          style={{ backgroundColor: unlocked ? asset.color : "#243049" }}
+          className="border-line flex size-11 shrink-0 items-center justify-center rounded-md border"
+          style={
+            unlocked
+              ? {
+                  backgroundColor: `color-mix(in srgb, ${asset.color} 22%, white)`,
+                  borderColor: `color-mix(in srgb, ${asset.color} 45%, white)`,
+                  // 一番淡い事業色でも WCAG AA を満たすよう、文字は黒寄りに振る
+                  color: `color-mix(in srgb, ${asset.color} 45%, black)`,
+                }
+              : undefined
+          }
         >
           {unlocked ? (
-            <span className="tabular text-sm font-bold text-white/90 drop-shadow">
-              {owned}
-            </span>
+            <span className="tabular text-sm font-bold">{owned}</span>
           ) : (
-            <Lock size={16} className="text-slate-400" />
+            <Lock size={16} className="text-ink-mute" />
           )}
         </span>
 
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold text-slate-100">
+          <span className="text-ink block truncate text-sm font-bold">
             {asset.name}
           </span>
 
@@ -102,21 +113,21 @@ function ShopRow({
           <span className="mt-0.5 flex items-center gap-1.5 text-xs">
             <span
               className="size-2 shrink-0 rounded-full"
-              style={{ backgroundColor: unlocked ? category.color : "#33405c" }}
+              style={{ backgroundColor: unlocked ? category.color : "#cfc3ae" }}
             />
-            <span className="shrink-0 text-slate-500">{category.name}</span>
+            <span className="text-ink-mute shrink-0">{category.name}</span>
             {unlocked ? (
-              <span className="tabular truncate text-slate-400">
+              <span className="tabular text-ink-soft truncate">
                 ／ 1件 +{formatNumber(production)} PT/s
                 {owned > 0 && (
-                  <span className="text-slate-500">
+                  <span className="text-ink-mute">
                     {" "}
                     ／ 計 {formatNumber(owned * production)} PT/s
                   </span>
                 )}
               </span>
             ) : (
-              <span className="truncate text-slate-500">
+              <span className="text-ink-mute truncate">
                 ／ {describeUnlock(asset)}
               </span>
             )}
@@ -124,11 +135,11 @@ function ShopRow({
         </span>
 
         <span className="shrink-0 text-right">
-          <span className="text-[10px] tracking-widest text-slate-500">取得費</span>
+          <span className="text-ink-mute text-[10px] tracking-widest">取得費</span>
           <span
             className={[
               "tabular block text-sm font-bold",
-              affordable ? "text-amber-300" : "text-slate-400",
+              affordable ? "text-brick-ink" : "text-ink-mute",
             ].join(" ")}
           >
             {formatNumber(cost)} PT

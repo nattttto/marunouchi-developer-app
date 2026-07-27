@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatNumber } from "../lib/gameLogic";
-import Skyline from "./Skyline";
+import PixelCity from "./PixelCity";
 
 type Props = {
   owned: Record<string, number>;
@@ -94,46 +94,41 @@ export default function ClickArea({
       type="button"
       onClick={handleClick}
       aria-label={`着工する（+${formatNumber(clickPower)} PT、竣工まであと${remaining}回）`}
-      className="group relative w-full flex-1 cursor-pointer overflow-hidden bg-gradient-to-b from-[#0d1730] via-[#122040] to-[#1b2c52] text-left"
+      className="from-sky-top via-sky-mid to-sky-low group relative w-full flex-1 cursor-pointer overflow-hidden bg-gradient-to-b text-left"
     >
-      {/* 夜空の光 */}
-      <div className="skyline-glow pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-amber-400/15 to-transparent" />
+      {/* 地平線あたりの陽だまり */}
+      <div className="daylight from-brick/15 pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent" />
 
-      <Skyline owned={owned} />
-
-      {/* 地面 */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2 bg-[#050a14]" />
-
-      {/* クリックの手応え。押している間だけ全体がわずかに光る */}
-      <div className="pointer-events-none absolute inset-0 bg-amber-300/0 transition-colors duration-75 group-active:bg-amber-300/[0.07]" />
+      {/* 地面・道路・街路樹まで canvas 側で描く */}
+      <PixelCity owned={owned} />
 
       {/*
         着工ゲージ。背の高いビルと重なると読めなくなるので、
         上部から暗いスクリムをかけて文字のコントラストを確保する。
       */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-[#070c18] via-[#070c18]/75 to-transparent px-4 pt-3 pb-8">
-        <p className="tabular text-center text-xs text-slate-200">
+      <div className="from-canvas via-canvas/80 pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b to-transparent px-4 pt-3 pb-8">
+        <p className="tabular text-ink text-center text-xs">
           1タップ{" "}
-          <span className="font-bold text-amber-300">
+          <span className="text-brick-ink font-bold">
             +{formatNumber(clickPower)}
           </span>{" "}
           PT
         </p>
 
         <div className="mx-auto mt-2 w-full max-w-sm">
-          <div className="flex items-baseline justify-between text-[10px] text-slate-300/80">
+          <div className="text-ink-mute flex items-baseline justify-between text-[10px]">
             <span className="tracking-widest">着工ゲージ</span>
             <span className="tabular">
               {groundworkClicks} / {groundworkGoal}
             </span>
           </div>
-          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-black/50">
+          <div className="bg-line-strong mt-1 h-1.5 overflow-hidden rounded-full">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-sky-400 to-amber-300 transition-[width] duration-100"
+              className="bg-brick h-full rounded-full transition-[width] duration-100"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="tabular mt-1 text-right text-[10px] text-slate-400">
+          <p className="tabular text-ink-mute mt-1 text-right text-[10px]">
             竣工で +{formatNumber(completionBonus)} PT
           </p>
         </div>
@@ -145,11 +140,11 @@ export default function ClickArea({
           className="float-up pointer-events-none absolute z-10 flex flex-col items-center"
           style={{ left: f.x, top: f.y }}
         >
-          <span className="tabular text-xl font-bold text-amber-300 drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)]">
+          <span className="tabular text-brick-ink text-xl font-bold drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)]">
             +{formatNumber(f.value)}
           </span>
           {f.bonus !== null && (
-            <span className="tabular mt-0.5 text-base font-bold whitespace-nowrap text-sky-300 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
+            <span className="tabular text-sage-ink mt-0.5 text-base font-bold whitespace-nowrap drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)]">
               竣工！ +{formatNumber(f.bonus)}
             </span>
           )}

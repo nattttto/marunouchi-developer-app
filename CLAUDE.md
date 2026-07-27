@@ -48,6 +48,9 @@ Shop           … 事業取得リスト。ここだけ縦スクロールする
 | `src/app/lib/gameLogic.ts` | **計算の中心**：コスト・倍率・秒間収益・解放判定・展開率・表示フォーマット。React/DOM/localStorage に依存しない純粋関数のみ |
 | `src/app/lib/saveData.ts` | localStorage の読み書きとオフライン収益の計算。**localStorage を触るのはここだけ** |
 | `src/app/lib/env.ts` | `IS_DEV`（開発中だけ有効にする機能のフラグ） |
+| `src/app/lib/cityScene.ts` | 保有状況から街の配置を組み立てる純粋関数。canvas に依存しない |
+| `src/app/lib/cityRender.ts` | 街をドット絵として canvas に描く。色は CSS 変数から読む |
+| `src/app/components/PixelCity.tsx` | 上2つを繋ぐ canvas コンポーネント |
 | `src/app/hooks/useGame.ts` | `useReducer` による状態遷移＋ゲームループ＋自動セーブ＋導出値の計算 |
 | `src/app/page.tsx` | 全体の組み立て |
 
@@ -153,7 +156,28 @@ reducer の結果を effect で監視する必要はない。
 （`.next/static` に「DEV ONLY」の文字列が残らないことを確認済み）。
 `useGame` 側のコールバックも `IS_DEV` でガードしてある。
 
-### スカイライン描画
+### 街の描画（ドット絵）
+
+`PixelCity.tsx`（canvas）＋ `cityScene.ts`（配置＝純粋関数）＋ `cityRender.ts`（描画）の3層。
+論理解像度を小さく取り、CSS 側で `image-rendering: pixelated` を当てて拡大するとドット絵になる。
+**画像素材は使わない。** 事業の幅・高さ・形・色から手続き的に生成しているので、
+事業を追加しても破綻しない。
+
+配置の3原則（「街を育てている感」を出すための土台。崩さないこと）:
+
+1. **間引かない。** 保有している事業はすべて街に出す。
+   以前は上限を超えると下位の事業から間引いていたが、育てたものが消えるのは
+   積み上げた感覚と真逆だった
+2. **並べ替えない。** 区画は常に取得順（＝コストの安い順）で左から並ぶ。
+   買うたびに街の形が変わると、同じ街を育てている感覚が持てない
+3. **手前の列（`FRONT_ROW_CAPACITY` = 10）から溢れた下位の事業は、奥の列へ下げる。**
+   消さずに奥行きへ逃がす。奥の列は幅・高さともに `BACK_SCALE` 倍で、
+   色は空の色（`--color-sky-low`）へ寄せて遠くに見せる
+
+**建物は保有数で育つ。** `getGrowthStage` が 5件で段階2（高さ×1.18＋アンテナ）、
+10件で段階3（高さ×1.36＋屋上設備）を返す。本数が増えるだけでは投資した実感が薄いので、
+建物そのものを育てるのが主役。加えて `getBackBuildingCount` が主棟の背後に副棟を重ね、
+保有数の多さを密度でも見せる。
 
 `Asset.shape` で描き分ける。
 
@@ -161,13 +185,18 @@ reducer の結果を effect で監視する必要はない。
 |---|---|---|
 | `tower` | 高く細い、窓の点グリッド | 丸ビル、1251 Avenue |
 | `midrise` | 中層、窓の点グリッド | ザ・パークハウス、ロイヤルパークホテル |
-| `lowrise` | 低く横長、横帯のファサード | 御殿場アウトレット、ロジクロス |
+| `lowrise` | 低く横長、横帯のファサード | 御殿場アウトレット、ロジクロス、CM事業 |
 | `airport` | さらに低く横長＋管制塔1本 | 高松空港 |
-| `none` | **描画しない**（収益のみ） | CM事業、プロパティマネジメント |
 
-事業が21種あるため、個別上限（`MAX_SILHOUETTES_PER_ASSET`）だけでは横に潰れる。
-**上位（コストの高い）事業から積んで `MAX_TOTAL_SILHOUETTES` で打ち切る**ので、
-下位の事業は自然に消えて主力事業が前に出る。並びは左右交互に振って中央が高い山型にしている。
+**描画しない事業は作らない。** 無形のCM事業や設計も低層の事務所として街に出す。
+買ったのに街に何も現れないのは達成感を削ぐため（以前は `shape: "none"` で描画対象外だった）。
+
+`DECORATION_SPACE` は建物の上に空ける余白。アンテナや屋上設備は天面より上に描くので、
+これが無いと一番高い事業の段階3で装飾が画面外に切れる（実際に切れていた）。
+
+canvas の論理サイズは container の実寸から毎回決め直す。**初回は `ResizeObserver` を待たず
+同期で測る。** ResizeObserver の通知はレンダリングステップで配信されるため、
+タブが描画されていない状況では届かず、何も描画されないことがある（実際に踏んだ）。
 
 ### 数値バランス
 
@@ -179,7 +208,8 @@ reducer の結果を effect で監視する必要はない。
 - `GROUNDWORK_BASE_GOAL` / `GROUNDWORK_GOAL_GROWTH` / `COMPLETION_BONUS_SECONDS` /
   `COMPLETION_BONUS_FLOOR_PER_CLICK`（着工ゲージと竣工ボーナス）
 - `GOAL_COUNT_PER_ASSET`（展開率100%に必要な1事業あたりの保有数 = 10）
-- `OWNED_PER_SILHOUETTE` / `MAX_SILHOUETTES_PER_ASSET` / `MAX_TOTAL_SILHOUETTES`
+- `GROWTH_STAGE_THRESHOLDS` / `FRONT_ROW_CAPACITY` / `MAX_BACK_BUILDINGS` /
+  `OWNED_PER_BACK_BUILDING`（街の見せ方）
 
 コストは `baseCost × costMultiplier ^ 保有数`（Cookie Clicker 方式）を `Math.ceil` した値。
 `ASSETS` は**コストの安い順に並べる**（ショップの表示順がそのままこの順序）。
@@ -194,16 +224,41 @@ reducer の結果を effect で監視する必要はない。
 倍率は `formatMultiplier()`（`×1.25` の数字部分）。
 桁が変わるたびに数字がガタつかないよう、カウンター類には `.tabular`（`font-variant-numeric: tabular-nums`）を付ける。
 
-### UI
+### UI とテーマ
 
 Tailwind CSS v4（`globals.css` の `@import "tailwindcss"` のみ。設定ファイルは無し）。
-ダークテーマ固定。外部UIライブラリは `lucide-react` のみ。
+外部UIライブラリは `lucide-react` のみ。
 
-`Asset.color` はカテゴリごとに色系統を揃えてある（オフィス=青、商業・ホテル=橙、住宅=緑、
-インフラ=鋼、設計・サービス=紫、海外=金）。スカイラインを見てどの事業が伸びているか
-分かるようにするため。`Category.color` はタグとチップ用の代表色。
+**配色は `globals.css` の `@theme` に集約する。コンポーネントで色を直書きしない。**
+`bg-canvas` `text-ink` `text-brick-ink` のようにユーティリティとして使えるので、
+テーマを変えるときは原則この表だけ差し替える。
 
-アニメーション（クレーンの揺れ・`+N` のフローティング・夜景の明滅）は `globals.css` の
+現在のテーマは「ソフトライト」：生成りの地（`canvas`）に、テラコッタ（`brick`＝主アクセント。
+PT・コスト・ゲージ）とセージ（`sage`＝副アクセント。展開率・シナジー）。
+
+塗り用と文字用を分けてある。`brick` は塗りと大きい数字用、`brick-ink` は小さい文字用で、
+明るい地の上でコントラスト比 4.5:1 を確保できる明度にしてある。`ink-mute` も同様に
+10〜11px のラベルで AA を満たす `#736c5e` に留めてあるので、これ以上明るくしないこと。
+
+**フォントは `body` で指定する。** next/font の変数は `<body>` に付くため、
+`:root` で解決される通常の `@theme` からは参照できず system フォントに落ちる。
+`@theme inline` も `font-sans` ユーティリティを直すだけで body には継承されない（実際に踏んだ）。
+
+日本語フォントはウェイトごとにサブセットが増えて重くなる。Zen Maru Gothic は
+実際に使う 400 と 700 だけ読み込んでいる（3ウェイトだと CSS が 94.5kB、2ウェイトで 63.1kB）。
+
+`Asset.color` はカテゴリごとに色系統を揃えてある（オフィス=青灰、商業・ホテル=テラコッタ、
+住宅=セージ、インフラ=石、設計・サービス=藤、海外=真鍮）。スカイラインを見てどの事業が
+伸びているか分かるようにするため。`Category.color` はタグとチップ用の代表色。
+
+**明るい背景なので、上位の事業ほど濃い色にしてある。** 暗いテーマに戻すときは明度の向きを
+反転させること。同じ理由で、スカイラインの窓は「光る点」ではなく「暗く落ちる点」
+（`Skyline.tsx` の `WINDOW_GRID`）。
+
+ショップのスウォッチは事業色をそのまま敷くと白抜き文字が読めないので、`color-mix` で
+淡い塗り・濃い文字に振り分けている。一番淡い事業色でも 6.9:1 を確保している。
+
+アニメーション（`+N` のフローティング・地平線の陽の揺らぎ）は `globals.css` の
 `@keyframes` に置いてある。`prefers-reduced-motion: reduce` で無効化する分岐も同ファイル内にある。
 
 ## 未実装（後日拡張の想定）

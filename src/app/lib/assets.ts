@@ -9,12 +9,12 @@ import type { Asset, Category, CategoryId, MultiplierTier } from "./types";
  */
 
 export const CATEGORIES: Category[] = [
-  { id: "office", name: "オフィス", shortName: "オフィス", color: "#688cbf" },
-  { id: "retail", name: "商業・ホテル", shortName: "商業", color: "#c2764a" },
-  { id: "residence", name: "住宅", shortName: "住宅", color: "#5f9e72" },
-  { id: "infra", name: "インフラ・物流", shortName: "インフラ", color: "#8b96a3" },
-  { id: "service", name: "設計・サービス", shortName: "設計", color: "#8f6fc9" },
-  { id: "overseas", name: "海外", shortName: "海外", color: "#c2a04a" },
+  { id: "office", name: "オフィス", shortName: "オフィス", color: "#667d97" },
+  { id: "retail", name: "商業・ホテル", shortName: "商業", color: "#c0684d" },
+  { id: "residence", name: "住宅", shortName: "住宅", color: "#6e8f72" },
+  { id: "infra", name: "インフラ・物流", shortName: "インフラ", color: "#918977" },
+  { id: "service", name: "設計・サービス", shortName: "設計", color: "#977896" },
+  { id: "overseas", name: "海外", shortName: "海外", color: "#ae8c4a" },
 ];
 
 export const CATEGORY_MAP: Record<CategoryId, Category> = Object.fromEntries(
@@ -25,9 +25,12 @@ export const CATEGORY_MAP: Record<CategoryId, Category> = Object.fromEntries(
  * 事業マスタ。コストの安い順に並べ、1つ前の事業を1件保有すると次が解放される。
  * 進行のゲートは実質コストが担っている。
  *
- * `color` はカテゴリごとに色系統を揃えてある（オフィス=青、商業・ホテル=橙、
- * 住宅=緑、インフラ=鋼、設計・サービス=紫、海外=金）。
+ * `color` はカテゴリごとに色系統を揃えてある（オフィス=青灰、商業・ホテル=テラコッタ、
+ * 住宅=セージ、インフラ=石、設計・サービス=藤、海外=真鍮）。
  * スカイラインを見たときにどの事業が伸びているか分かるようにするため。
+ *
+ * **明るい背景の上に描くので、上位の事業ほど濃い色にしてある。**
+ * 暗い背景のときとは明度の向きが逆なので、テーマを変えるときは合わせて反転させること。
  */
 export const ASSETS: Asset[] = [
   {
@@ -38,7 +41,7 @@ export const ASSETS: Asset[] = [
     costMultiplier: 1.15,
     baseProduction: 0.1,
     shape: "tower",
-    color: "#3c4a63",
+    color: "#a9b4c2",
     heightRatio: 0.26,
     widthRatio: 0.9,
   },
@@ -49,10 +52,10 @@ export const ASSETS: Asset[] = [
     baseCost: 60,
     costMultiplier: 1.15,
     baseProduction: 0.45,
-    shape: "none",
-    color: "#8f6fc9",
-    heightRatio: 0,
-    widthRatio: 0,
+    shape: "lowrise",
+    color: "#a98ba8",
+    heightRatio: 0.1,
+    widthRatio: 1.6,
     unlockRequirement: { assetId: "uchisaiwaicho", count: 1 },
   },
   {
@@ -63,7 +66,7 @@ export const ASSETS: Asset[] = [
     costMultiplier: 1.15,
     baseProduction: 0.8,
     shape: "tower",
-    color: "#47597a",
+    color: "#98a6b8",
     heightRatio: 0.36,
     widthRatio: 1.0,
     unlockRequirement: { assetId: "cm-business", count: 1 },
@@ -76,7 +79,7 @@ export const ASSETS: Asset[] = [
     costMultiplier: 1.15,
     baseProduction: 2.2,
     shape: "midrise",
-    color: "#5f9e72",
+    color: "#8fae8c",
     heightRatio: 0.3,
     widthRatio: 1.0,
     unlockRequirement: { assetId: "tokyo-building", count: 1 },
@@ -89,7 +92,7 @@ export const ASSETS: Asset[] = [
     costMultiplier: 1.16,
     baseProduction: 4,
     shape: "tower",
-    color: "#526a91",
+    color: "#8798ad",
     heightRatio: 0.45,
     widthRatio: 1.1,
     unlockRequirement: { assetId: "park-habio", count: 1 },
@@ -101,10 +104,10 @@ export const ASSETS: Asset[] = [
     baseCost: 1_100,
     costMultiplier: 1.16,
     baseProduction: 9,
-    shape: "none",
-    color: "#a184d9",
-    heightRatio: 0,
-    widthRatio: 0,
+    shape: "lowrise",
+    color: "#977896",
+    heightRatio: 0.16,
+    widthRatio: 1.7,
     unlockRequirement: { assetId: "mitsubishi-building", count: 1 },
   },
   {
@@ -115,7 +118,7 @@ export const ASSETS: Asset[] = [
     costMultiplier: 1.16,
     baseProduction: 14,
     shape: "midrise",
-    color: "#45805a",
+    color: "#6e8f72",
     heightRatio: 0.42,
     widthRatio: 1.1,
     unlockRequirement: { assetId: "jec-design", count: 1 },
@@ -128,7 +131,7 @@ export const ASSETS: Asset[] = [
     costMultiplier: 1.16,
     baseProduction: 20,
     shape: "tower",
-    color: "#5d7ba8",
+    color: "#768aa2",
     heightRatio: 0.57,
     widthRatio: 1.2,
     unlockRequirement: { assetId: "park-house", count: 1 },
@@ -141,7 +144,7 @@ export const ASSETS: Asset[] = [
     costMultiplier: 1.16,
     baseProduction: 42,
     shape: "lowrise",
-    color: "#78838f",
+    color: "#a8a093",
     heightRatio: 0.14,
     widthRatio: 2.4,
     unlockRequirement: { assetId: "otemachi-park", count: 1 },
@@ -154,7 +157,7 @@ export const ASSETS: Asset[] = [
     costMultiplier: 1.17,
     baseProduction: 100,
     shape: "tower",
-    color: "#688cbf",
+    color: "#667d97",
     heightRatio: 0.68,
     widthRatio: 1.2,
     unlockRequirement: { assetId: "logicross", count: 1 },
@@ -167,7 +170,7 @@ export const ASSETS: Asset[] = [
     costMultiplier: 1.17,
     baseProduction: 205,
     shape: "lowrise",
-    color: "#c2764a",
+    color: "#c0684d",
     heightRatio: 0.3,
     widthRatio: 1.9,
     unlockRequirement: { assetId: "marunouchi-park", count: 1 },
@@ -180,7 +183,7 @@ export const ASSETS: Asset[] = [
     costMultiplier: 1.18,
     baseProduction: 500,
     shape: "tower",
-    color: "#739dd6",
+    color: "#56708c",
     heightRatio: 0.79,
     widthRatio: 1.3,
     unlockRequirement: { assetId: "mark-is", count: 1 },
@@ -193,7 +196,7 @@ export const ASSETS: Asset[] = [
     costMultiplier: 1.18,
     baseProduction: 1_050,
     shape: "midrise",
-    color: "#d89257",
+    color: "#c98a6a",
     heightRatio: 0.62,
     widthRatio: 1.2,
     unlockRequirement: { assetId: "shin-marubiru", count: 1 },
@@ -206,7 +209,7 @@ export const ASSETS: Asset[] = [
     costMultiplier: 1.19,
     baseProduction: 2_500,
     shape: "tower",
-    color: "#86b0e3",
+    color: "#476381",
     heightRatio: 0.9,
     widthRatio: 1.35,
     unlockRequirement: { assetId: "royal-park-hotel", count: 1 },
@@ -219,7 +222,7 @@ export const ASSETS: Asset[] = [
     costMultiplier: 1.19,
     baseProduction: 5_200,
     shape: "lowrise",
-    color: "#b3633c",
+    color: "#a85b42",
     heightRatio: 0.16,
     widthRatio: 2.2,
     unlockRequirement: { assetId: "marubiru", count: 1 },
@@ -232,7 +235,7 @@ export const ASSETS: Asset[] = [
     costMultiplier: 1.2,
     baseProduction: 12_000,
     shape: "tower",
-    color: "#9dc4f0",
+    color: "#3a5876",
     heightRatio: 1,
     widthRatio: 1.4,
     unlockRequirement: { assetId: "gotemba-outlet", count: 1 },
@@ -245,7 +248,7 @@ export const ASSETS: Asset[] = [
     costMultiplier: 1.2,
     baseProduction: 27_000,
     shape: "airport",
-    color: "#96a1ad",
+    color: "#918977",
     heightRatio: 0.1,
     widthRatio: 2.6,
     unlockRequirement: { assetId: "otemachi-tower", count: 1 },
@@ -257,10 +260,10 @@ export const ASSETS: Asset[] = [
     baseCost: 11_000_000,
     costMultiplier: 1.2,
     baseProduction: 65_000,
-    shape: "none",
-    color: "#7a5cb0",
-    heightRatio: 0,
-    widthRatio: 0,
+    shape: "midrise",
+    color: "#856584",
+    heightRatio: 0.34,
+    widthRatio: 1.2,
     unlockRequirement: { assetId: "takamatsu-airport", count: 1 },
   },
   {
@@ -271,7 +274,7 @@ export const ASSETS: Asset[] = [
     costMultiplier: 1.21,
     baseProduction: 155_000,
     shape: "tower",
-    color: "#c2a04a",
+    color: "#c2a05e",
     heightRatio: 0.88,
     widthRatio: 1.35,
     unlockRequirement: { assetId: "property-management", count: 1 },
@@ -284,7 +287,7 @@ export const ASSETS: Asset[] = [
     costMultiplier: 1.21,
     baseProduction: 380_000,
     shape: "tower",
-    color: "#d4b45f",
+    color: "#ae8c4a",
     heightRatio: 0.94,
     widthRatio: 1.3,
     unlockRequirement: { assetId: "ny-1251", count: 1 },
@@ -297,7 +300,7 @@ export const ASSETS: Asset[] = [
     costMultiplier: 1.22,
     baseProduction: 920_000,
     shape: "tower",
-    color: "#ab8b38",
+    color: "#96793c",
     heightRatio: 0.72,
     widthRatio: 1.25,
     unlockRequirement: { assetId: "london-8bishopsgate", count: 1 },
@@ -360,15 +363,20 @@ export const COMPLETION_BONUS_FLOOR_PER_CLICK = 3;
 /** 「グループ展開率 100%」に必要な1事業あたりの保有数 */
 export const GOAL_COUNT_PER_ASSET = 10;
 
-/** スカイラインに描く1事業あたりの最大本数 */
-export const MAX_SILHOUETTES_PER_ASSET = 4;
+/**
+ * 建物が育つ保有数のしきい値。[第2段階, 第3段階]。
+ * 本数が増えるだけでは投資した実感が薄いので、建物そのものを育てる。
+ */
+export const GROWTH_STAGE_THRESHOLDS = [5, 10] as const;
 
 /**
- * スカイライン全体の最大本数。
- * 事業が21種に増えたので個別上限だけでは描画が潰れる。
- * 超過ぶんは下位の事業から間引き、上位の事業が前に出るようにしてある。
+ * 手前の列に置ける事業の数。ここから溢れた下位の事業は奥の列へ下がる。
+ * **間引きはしない。** 育てたものが消えるのは積み上げた感覚と真逆になる。
  */
-export const MAX_TOTAL_SILHOUETTES = 40;
+export const FRONT_ROW_CAPACITY = 10;
 
-/** 何件保有するごとにスカイラインの描画本数を1本増やすか */
-export const OWNED_PER_SILHOUETTE = 3;
+/** 主棟の背後に重ねる副棟の上限。保有数の多さを密度で見せる */
+export const MAX_BACK_BUILDINGS = 3;
+
+/** 何件保有するごとに副棟を1棟増やすか */
+export const OWNED_PER_BACK_BUILDING = 3;
