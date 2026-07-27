@@ -1,15 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Zen_Maru_Gothic } from "next/font/google";
 import "./globals.css";
-
-// 角の丸いゴシック。生成りの配色とあわせて全体の当たりを柔らかくする。
-// 日本語フォントはウェイトごとにサブセットが増えて重いので、実際に使う2種だけ読む。
-const zenMaruGothic = Zen_Maru_Gothic({
-  variable: "--font-zen-maru",
-  weight: ["400", "700"],
-  subsets: ["latin"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "丸の内デベロッパー",
@@ -30,7 +20,24 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body className={`${zenMaruGothic.variable} antialiased`}>{children}</body>
+      <body className="antialiased">
+        {/*
+          Zen Maru Gothic は public/fonts に自前ホストしている。
+          next/font/google はビルド時に Google から 244 個のスライスを取りに行き、
+          Vercel のビルドで取得に失敗して落ちたため使わない（CLAUDE.md 参照）。
+
+          import せず link で読むのは意図的。この CSS は 212KB あるうえ内容が変わらないので、
+          アプリの CSS バンドルに混ぜると更新のたびに再ダウンロードさせることになる。
+          別ファイルなら長期キャッシュが効く。React が <head> へ巻き上げる。
+        */}
+        {/* eslint-disable-next-line @next/next/no-css-tags */}
+        <link
+          rel="stylesheet"
+          href="/fonts/zen-maru-gothic.css"
+          precedence="high"
+        />
+        {children}
+      </body>
     </html>
   );
 }
