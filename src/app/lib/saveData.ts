@@ -1,4 +1,4 @@
-import { BUILDINGS } from "./buildings";
+import { ASSETS } from "./assets";
 import { getTotalRate } from "./gameLogic";
 import type { GameState } from "./types";
 
@@ -36,7 +36,7 @@ export function createInitialState(): GameState {
   return {
     points: 0,
     totalEarned: 0,
-    owned: Object.fromEntries(BUILDINGS.map((b) => [b.id, 0])),
+    owned: Object.fromEntries(ASSETS.map((a) => [a.id, 0])),
     clickPower: 1,
     lastSavedAt: Date.now(),
   };
@@ -52,18 +52,16 @@ function toSafeNumber(value: unknown, fallback: number): number {
 
 /**
  * 保存された JSON を GameState に正規化する。
- * 知らない建物IDは捨て、足りないIDは 0 で埋めるので、
- * 建物マスタを増減してもセーブデータが壊れない。
+ * 知らない事業IDは捨て、足りないIDは 0 で埋めるので、
+ * 事業マスタを増減してもセーブデータが壊れない。
  */
 function normalize(raw: unknown): GameState | null {
   if (typeof raw !== "object" || raw === null) return null;
   const data = raw as Partial<GameState>;
 
   const owned: Record<string, number> = {};
-  for (const building of BUILDINGS) {
-    owned[building.id] = Math.floor(
-      toSafeNumber(data.owned?.[building.id], 0)
-    );
+  for (const asset of ASSETS) {
+    owned[asset.id] = Math.floor(toSafeNumber(data.owned?.[asset.id], 0));
   }
   return {
     points: toSafeNumber(data.points, 0),
@@ -123,7 +121,7 @@ export function calcOfflineEarnings(
   }
 
   const seconds = Math.min(elapsedSeconds, MAX_OFFLINE_SECONDS);
-  const points = getTotalRate(BUILDINGS, state.owned) * seconds;
+  const points = getTotalRate(ASSETS, state.owned) * seconds;
   if (points < 1) return null;
 
   return {

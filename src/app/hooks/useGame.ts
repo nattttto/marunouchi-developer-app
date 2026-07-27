@@ -1,8 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { BUILDINGS, BUILDING_MAP } from "../lib/buildings";
-import { getCost, getTotalRate, isUnlocked } from "../lib/gameLogic";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
+import { ASSETS, ASSET_MAP } from "../lib/assets";
+import {
+  getCategoryCounts,
+  getCategoryMultipliers,
+  getCost,
+  getEffectiveProduction,
+  getGroupSynergyMultiplier,
+  getTotalRate,
+  isUnlocked,
+} from "../lib/gameLogic";
 import {
   calcOfflineEarnings,
   clearSave,
@@ -22,7 +37,7 @@ const AUTOSAVE_MS = 5_000;
 type Action =
   | { type: "load"; state: GameState }
   | { type: "click" }
-  | { type: "buy"; buildingId: string }
+  | { type: "buy"; assetId: string }
   | { type: "tick"; seconds: number }
   | { type: "grant"; points: number }
   | { type: "reset" };
@@ -41,7 +56,7 @@ function reducer(state: GameState, action: Action): GameState {
       };
 
     case "tick": {
-      const gained = getTotalRate(BUILDINGS, state.owned) * action.seconds;
+      const gained = getTotalRate(ASSETS, state.owned) * action.seconds;
       if (gained <= 0) return state;
       return {
         ...state,
@@ -58,18 +73,18 @@ function reducer(state: GameState, action: Action): GameState {
       };
 
     case "buy": {
-      const building = BUILDING_MAP[action.buildingId];
-      if (!building) return state;
-      if (!isUnlocked(building, state.owned)) return state;
+      const asset = ASSET_MAP[action.assetId];
+      if (!asset) return state;
+      if (!isUnlocked(asset, state.owned)) return state;
 
-      const count = state.owned[building.id] ?? 0;
-      const cost = getCost(building, count);
+      const count = state.owned[asset.id] ?? 0;
+      const cost = getCost(asset, count);
       if (state.points < cost) return state;
 
       return {
         ...state,
         points: state.points - cost,
-        owned: { ...state.owned, [building.id]: count + 1 },
+        owned: { ...state.owned, [asset.id]: count + 1 },
       };
     }
 
@@ -137,33 +152,45 @@ export function useGame() {
     };
   }, [loaded]);
 
-  const totalRate = useMemo(
-    () => getTotalRate(BUILDINGS, state.owned),
-    [state.owned]
-  );
+  /**
+   * 保有数から導出される値はまとめてここで計算する。
+   * state に持たせると二重管理でズレるため。
+   * 倍率は全事業で共有するので、1回だけ求めて使い回す。
+   */
+  const derived = useMemo(() => {
+    const { owned } = state;
+    const categoryMultipliers = getCategoryMultipliers(owned);
+    const groupMultiplier = getGroupSynergyMultiplier(owned);
 
-  /** 建物ID -> 次の1棟のコスト。保有数が変わったときだけ再計算する */
-  const costs = useMemo(() => {
-    const result: Record<string, number> = {};
-    for (const building of BUILDINGS) {
-      result[building.id] = getCost(building, state.owned[building.id] ?? 0);
-    }
-    return result;
-  }, [state.owned]);
+    const costs: Record<string, number> = {};
+    const unlocked: Record<string, boolean> = {};
+    const effectiveProduction: Record<string, number> = {};
 
-  /** 建物ID -> 解放済みか */
-  const unlocked = useMemo(() => {
-    const result: Record<string, boolean> = {};
-    for (const building of BUILDINGS) {
-      result[building.id] = isUnlocked(building, state.owned);
+    for (const asset of ASSETS) {
+      costs[asset.id] = getCost(asset, owned[asset.id] ?? 0);
+      unlocked[asset.id] = isUnlocked(asset, owned);
+      effectiveProduction[asset.id] = getEffectiveProduction(
+        asset,
+        categoryMultipliers,
+        groupMultiplier
+      );
     }
-    return result;
-  }, [state.owned]);
+
+    return {
+      categoryCounts: getCategoryCounts(owned),
+      categoryMultipliers,
+      groupMultiplier,
+      costs,
+      unlocked,
+      effectiveProduction,
+      totalRate: getTotalRate(ASSETS, owned),
+    };
+  }, [state]);
 
   const click = useCallback(() => dispatch({ type: "click" }), []);
 
   const buy = useCallback(
-    (buildingId: string) => dispatch({ type: "buy", buildingId }),
+    (assetId: string) => dispatch({ type: "buy", assetId }),
     []
   );
 
@@ -178,10 +205,8 @@ export function useGame() {
   return {
     state,
     loaded,
-    totalRate,
-    costs,
-    unlocked,
     offline,
+    ...derived,
     click,
     buy,
     reset,
