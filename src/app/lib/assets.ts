@@ -52,10 +52,10 @@ export const ASSETS: Asset[] = [
     baseCost: 60,
     costMultiplier: 1.15,
     baseProduction: 0.45,
-    shape: "none",
+    shape: "lowrise",
     color: "#a98ba8",
-    heightRatio: 0,
-    widthRatio: 0,
+    heightRatio: 0.1,
+    widthRatio: 1.6,
     unlockRequirement: { assetId: "uchisaiwaicho", count: 1 },
   },
   {
@@ -104,10 +104,10 @@ export const ASSETS: Asset[] = [
     baseCost: 1_100,
     costMultiplier: 1.16,
     baseProduction: 9,
-    shape: "none",
+    shape: "lowrise",
     color: "#977896",
-    heightRatio: 0,
-    widthRatio: 0,
+    heightRatio: 0.16,
+    widthRatio: 1.7,
     unlockRequirement: { assetId: "mitsubishi-building", count: 1 },
   },
   {
@@ -260,10 +260,10 @@ export const ASSETS: Asset[] = [
     baseCost: 11_000_000,
     costMultiplier: 1.2,
     baseProduction: 65_000,
-    shape: "none",
+    shape: "midrise",
     color: "#856584",
-    heightRatio: 0,
-    widthRatio: 0,
+    heightRatio: 0.34,
+    widthRatio: 1.2,
     unlockRequirement: { assetId: "takamatsu-airport", count: 1 },
   },
   {
@@ -363,15 +363,20 @@ export const COMPLETION_BONUS_FLOOR_PER_CLICK = 3;
 /** 「グループ展開率 100%」に必要な1事業あたりの保有数 */
 export const GOAL_COUNT_PER_ASSET = 10;
 
-/** スカイラインに描く1事業あたりの最大本数 */
-export const MAX_SILHOUETTES_PER_ASSET = 4;
+/**
+ * 建物が育つ保有数のしきい値。[第2段階, 第3段階]。
+ * 本数が増えるだけでは投資した実感が薄いので、建物そのものを育てる。
+ */
+export const GROWTH_STAGE_THRESHOLDS = [5, 10] as const;
 
 /**
- * スカイライン全体の最大本数。
- * 事業が21種に増えたので個別上限だけでは描画が潰れる。
- * 超過ぶんは下位の事業から間引き、上位の事業が前に出るようにしてある。
+ * 手前の列に置ける事業の数。ここから溢れた下位の事業は奥の列へ下がる。
+ * **間引きはしない。** 育てたものが消えるのは積み上げた感覚と真逆になる。
  */
-export const MAX_TOTAL_SILHOUETTES = 40;
+export const FRONT_ROW_CAPACITY = 10;
 
-/** 何件保有するごとにスカイラインの描画本数を1本増やすか */
-export const OWNED_PER_SILHOUETTE = 3;
+/** 主棟の背後に重ねる副棟の上限。保有数の多さを密度で見せる */
+export const MAX_BACK_BUILDINGS = 3;
+
+/** 何件保有するごとに副棟を1棟増やすか */
+export const OWNED_PER_BACK_BUILDING = 3;

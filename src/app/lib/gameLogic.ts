@@ -10,8 +10,9 @@ import {
   GROUNDWORK_BASE_GOAL,
   GROUNDWORK_GOAL_GROWTH,
   GROUP_SYNERGY_TIERS,
-  MAX_SILHOUETTES_PER_ASSET,
-  OWNED_PER_SILHOUETTE,
+  GROWTH_STAGE_THRESHOLDS,
+  MAX_BACK_BUILDINGS,
+  OWNED_PER_BACK_BUILDING,
 } from "./assets";
 import type { Asset, CategoryId, MultiplierTier } from "./types";
 
@@ -162,12 +163,23 @@ export function getDevelopmentRate(owned: Record<string, number>): number {
   return total / (ASSETS.length * GOAL_COUNT_PER_ASSET);
 }
 
-/** スカイラインに描く本数（保有数から算出、事業ごとの上限あり） */
-export function getSilhouetteCount(ownedCount: number): number {
+/**
+ * 建物の成長段階（1〜3）。保有数が増えるとその建物自体が育つ。
+ * 1 = 素の箱、2 = 高くなりアンテナが立つ、3 = さらに高く屋上設備が乗る。
+ */
+export function getGrowthStage(ownedCount: number): 1 | 2 | 3 {
+  const [second, third] = GROWTH_STAGE_THRESHOLDS;
+  if (ownedCount >= third) return 3;
+  if (ownedCount >= second) return 2;
+  return 1;
+}
+
+/** 主棟の背後に重ねる副棟の数。保有数の多さを密度で見せる */
+export function getBackBuildingCount(ownedCount: number): number {
   if (ownedCount <= 0) return 0;
   return Math.min(
-    Math.ceil(ownedCount / OWNED_PER_SILHOUETTE),
-    MAX_SILHOUETTES_PER_ASSET
+    MAX_BACK_BUILDINGS,
+    Math.ceil(ownedCount / OWNED_PER_BACK_BUILDING) - 1
   );
 }
 
