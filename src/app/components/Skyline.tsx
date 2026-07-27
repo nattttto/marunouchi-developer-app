@@ -23,12 +23,16 @@ const BASE_WIDTH = 18;
 /** 空港の管制塔の高さ(px) */
 const CONTROL_TOWER_HEIGHT = 24;
 
-/** 窓明かりの点グリッド。縦に伸びる建物用 */
-const WINDOW_GRID = "radial-gradient(rgba(255,214,130,0.5) 42%, transparent 46%)";
+/**
+ * 窓の点グリッド。縦に伸びる建物用。
+ * 明るい背景の昼の景色なので、窓は「光る」のではなく「暗く落ちる」。
+ * 暗いテーマに戻すときはここを暖色の光に戻すこと。
+ */
+const WINDOW_GRID = "radial-gradient(rgba(30,26,22,0.22) 42%, transparent 46%)";
 
 /** 横に長い施設（アウトレット・物流・空港）用の横帯 */
 const FACADE_BANDS =
-  "repeating-linear-gradient(to bottom, rgba(255,220,160,0.34) 0 2px, transparent 2px 8px)";
+  "repeating-linear-gradient(to bottom, rgba(30,26,22,0.16) 0 2px, transparent 2px 8px)";
 
 function surfaceStyle(shape: AssetShape): React.CSSProperties {
   if (shape === "lowrise" || shape === "airport") {
@@ -90,7 +94,7 @@ function Skyline({ owned }: Props) {
           )}
           <div
             className={[
-              "h-full w-full shadow-[0_0_16px_rgba(0,0,0,0.5)]",
+              "h-full w-full",
               s.shape === "tower" || s.shape === "midrise" ? "rounded-t-[2px]" : "",
             ].join(" ")}
             style={{ backgroundColor: s.color, ...surfaceStyle(s.shape) }}
