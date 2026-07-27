@@ -16,6 +16,8 @@ export type Category = {
   id: CategoryId;
   /** 表示名 */
   name: string;
+  /** 幅が限られる場所（カテゴリ帯）で使う短縮名。折り返し行数を抑えるため */
+  shortName: string;
   /** タグやチップに使う代表色 */
   color: string;
 };

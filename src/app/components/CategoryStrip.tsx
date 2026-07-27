@@ -23,14 +23,17 @@ function nextTier(count: number) {
 }
 
 /**
- * カテゴリごとの保有数と生産倍率を並べた横スクロールの帯。
- * ページ本体は縦1画面固定なので、ここだけ横方向にスクロールさせる。
+ * カテゴリごとの保有数と生産倍率を並べた帯。
+ *
+ * 横スクロールにするとスクロールバーが出て見栄えが悪く、
+ * 隠れたカテゴリにも気づけないので、折り返して全カテゴリを常に見せる。
+ * 狭い画面では2行になる。
  */
 function CategoryStrip({ categoryCounts, categoryMultipliers }: Props) {
   return (
     <div className="shrink-0 border-b border-white/10 bg-[#0a1020]">
-      <div className="mx-auto w-full max-w-2xl overflow-x-auto overscroll-x-contain px-3 py-2">
-        <ul className="flex w-max items-center gap-2">
+      <div className="mx-auto w-full max-w-2xl px-3 py-2">
+        <ul className="flex flex-wrap items-center justify-center gap-1.5">
           {CATEGORIES.map((category) => {
             const count = categoryCounts[category.id];
             const multiplier = categoryMultipliers[category.id];
@@ -45,19 +48,19 @@ function CategoryStrip({ categoryCounts, categoryMultipliers }: Props) {
                     : "カテゴリ倍率は上限に到達"
                 }
                 className={[
-                  "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs whitespace-nowrap",
+                  "flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] whitespace-nowrap",
                   count > 0
                     ? "border-white/15 bg-white/5 text-slate-200"
                     : "border-white/5 text-slate-500",
                 ].join(" ")}
               >
                 <span
-                  className="size-2 shrink-0 rounded-full"
+                  className="size-1.5 shrink-0 rounded-full"
                   style={{
                     backgroundColor: count > 0 ? category.color : "#33405c",
                   }}
                 />
-                <span>{category.name}</span>
+                <span>{category.shortName}</span>
                 <span className="tabular text-slate-400">{count}</span>
                 {multiplier > 1 && (
                   <span className="tabular font-semibold text-amber-300">

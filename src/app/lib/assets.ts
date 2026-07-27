@@ -9,12 +9,12 @@ import type { Asset, Category, CategoryId, MultiplierTier } from "./types";
  */
 
 export const CATEGORIES: Category[] = [
-  { id: "office", name: "オフィス", color: "#688cbf" },
-  { id: "retail", name: "商業・ホテル", color: "#c2764a" },
-  { id: "residence", name: "住宅", color: "#5f9e72" },
-  { id: "infra", name: "インフラ・物流", color: "#8b96a3" },
-  { id: "service", name: "設計・サービス", color: "#8f6fc9" },
-  { id: "overseas", name: "海外", color: "#c2a04a" },
+  { id: "office", name: "オフィス", shortName: "オフィス", color: "#688cbf" },
+  { id: "retail", name: "商業・ホテル", shortName: "商業", color: "#c2764a" },
+  { id: "residence", name: "住宅", shortName: "住宅", color: "#5f9e72" },
+  { id: "infra", name: "インフラ・物流", shortName: "インフラ", color: "#8b96a3" },
+  { id: "service", name: "設計・サービス", shortName: "設計", color: "#8f6fc9" },
+  { id: "overseas", name: "海外", shortName: "海外", color: "#c2a04a" },
 ];
 
 export const CATEGORY_MAP: Record<CategoryId, Category> = Object.fromEntries(
