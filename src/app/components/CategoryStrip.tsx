@@ -31,7 +31,7 @@ function nextTier(count: number) {
  */
 function CategoryStrip({ categoryCounts, categoryMultipliers }: Props) {
   return (
-    <div className="shrink-0 border-b border-white/10 bg-[#0a1020]">
+    <div className="border-line bg-surface-alt shrink-0 border-b">
       <div className="mx-auto w-full max-w-2xl px-3 py-2">
         <ul className="flex flex-wrap items-center justify-center gap-1.5">
           {CATEGORIES.map((category) => {
@@ -50,20 +50,20 @@ function CategoryStrip({ categoryCounts, categoryMultipliers }: Props) {
                 className={[
                   "flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] whitespace-nowrap",
                   count > 0
-                    ? "border-white/15 bg-white/5 text-slate-200"
-                    : "border-white/5 text-slate-500",
+                    ? "border-line-strong bg-surface text-ink"
+                    : "border-line text-ink-mute",
                 ].join(" ")}
               >
                 <span
                   className="size-1.5 shrink-0 rounded-full"
                   style={{
-                    backgroundColor: count > 0 ? category.color : "#33405c",
+                    backgroundColor: count > 0 ? category.color : "#cfc3ae",
                   }}
                 />
                 <span>{category.shortName}</span>
-                <span className="tabular text-slate-400">{count}</span>
+                <span className="tabular text-ink-mute">{count}</span>
                 {multiplier > 1 && (
-                  <span className="tabular font-semibold text-amber-300">
+                  <span className="tabular text-brick-ink font-bold">
                     ×{formatMultiplier(multiplier)}
                   </span>
                 )}

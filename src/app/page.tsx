@@ -38,8 +38,8 @@ export default function Home() {
   // localStorage を読むまでは何も出さない（サーバー描画との食い違いを避ける）
   if (!loaded) {
     return (
-      <main className="flex h-[100dvh] items-center justify-center bg-[#070c18]">
-        <p className="text-sm tracking-[0.3em] text-slate-500">丸の内デベロッパー</p>
+      <main className="bg-canvas flex h-[100dvh] items-center justify-center">
+        <p className="text-ink-mute text-sm tracking-[0.3em]">丸の内デベロッパー</p>
       </main>
     );
   }
@@ -72,7 +72,7 @@ export default function Home() {
         />
 
         {developmentRate >= 1 && (
-          <p className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-lg font-bold tracking-wider text-amber-300 drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
+          <p className="text-brick-ink pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-lg font-bold tracking-wider drop-shadow-[0_1px_4px_rgba(255,255,255,0.95)]">
             グループ展開率 100%
           </p>
         )}
