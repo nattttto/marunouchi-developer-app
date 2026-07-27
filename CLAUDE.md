@@ -56,8 +56,10 @@ Shop           … 事業取得リスト。ここだけ縦スクロールする
 
 ### 状態管理
 
-`GameState`（`points` / `totalEarned` / `owned` / `clickPower` / `lastSavedAt`）が状態のすべてで、
-これがそのままセーブ形式になる。
+`GameState`（`points` / `totalEarned` / `owned` / `groundworkClicks` / `completions` /
+`lastSavedAt`）が状態のすべてで、これがそのままセーブ形式になる。
+
+**1クリックの獲得量は `GameState` に持たない。** 秒間収益から `getClickPower` で導出する。
 
 - 状態遷移は `useGame.ts` の `reducer` に集約。`click` / `buy` / `tick` / `grant` / `load` / `reset` の6アクションのみ
 - reducer は純粋関数。**購入の可否判定（解放済みか・PTが足りるか）も reducer 内で必ず再チェックする**。
@@ -82,6 +84,40 @@ Shop           … 事業取得リスト。ここだけ縦スクロールする
 順序を崩すと低いほうの倍率が先に当たってしまうので、追加時は降順を維持すること。
 
 ショップの表示は素の値ではなく**実効値**に揃えてある（倍率が効いていることが分かるように）。
+
+### クリック収益と着工ゲージ
+
+クリッカーで一番壊れやすいのは「放置収益が指数的に伸びて手動クリックが即座に無意味になる」点。
+それを避けるための仕組みが2つ入っている。定数は `assets.ts`。
+
+**1. クリック収益を経済に連動させる**
+
+```
+1クリックの獲得量 = BASE_CLICK_POWER + 秒間収益 × CLICK_RATE_SHARE   (= 1 + 秒間収益 × 2%)
+```
+
+固定値の加算だと指数的な放置収益に勝てないため、割合で連動させて
+「常に秒間収益の数秒ぶん」の価値を保たせる。
+
+**2. 着工ゲージ → 竣工ボーナス**
+
+クリックするたび `groundworkClicks` が1増え、`getGroundworkGoal(completions)` に達すると
+竣工ボーナスをまとめて加算してゲージをリセットし、`completions` を1増やす。
+必要クリック数は竣工ごとに `GROUNDWORK_GOAL_GROWTH`（×1.15）で緩やかに増える。
+
+```
+竣工ボーナス = max(秒間収益 × COMPLETION_BONUS_SECONDS, 必要クリック数 × COMPLETION_BONUS_FLOOR_PER_CLICK)
+```
+
+**下限（第2項）が重要。** 秒間収益がまだ 0 に近い最序盤は第1項が 0 になり、
+一番クリックしてほしい時間帯にボーナスが無意味になってしまう。
+
+連打を強制するコンボ倍率系は入れていない（モバイルで指が疲れて離脱を招くため）。
+クリック回数がそのまま進捗になる形にしてある。
+
+竣工の演出は `ClickArea` 側で判定する。**props はクリック前の状態を持っているので、
+`groundworkClicks + 1 >= groundworkGoal` でそのクリックが竣工かを事前に判定できる。**
+reducer の結果を effect で監視する必要はない。
 
 ### ゲームループ
 
@@ -139,6 +175,9 @@ Shop           … 事業取得リスト。ここだけ縦スクロールする
 
 - 事業ごとの `baseCost` / `costMultiplier` / `baseProduction`
 - `CATEGORY_TIERS` / `GROUP_SYNERGY_TIERS`（倍率のしきい値）
+- `BASE_CLICK_POWER` / `CLICK_RATE_SHARE`（クリック収益）
+- `GROUNDWORK_BASE_GOAL` / `GROUNDWORK_GOAL_GROWTH` / `COMPLETION_BONUS_SECONDS` /
+  `COMPLETION_BONUS_FLOOR_PER_CLICK`（着工ゲージと竣工ボーナス）
 - `GOAL_COUNT_PER_ASSET`（展開率100%に必要な1事業あたりの保有数 = 10）
 - `OWNED_PER_SILHOUETTE` / `MAX_SILHOUETTES_PER_ASSET` / `MAX_TOTAL_SILHOUETTES`
 
@@ -169,6 +208,8 @@ Tailwind CSS v4（`globals.css` の `@import "tailwindcss"` のみ。設定フ�
 
 ## 未実装（後日拡張の想定）
 
-- アップグレード（クリック収益・事業ごとの生産倍率）。`GameState.clickPower` は器だけ用意済み
+- 購入型のアップグレード。クリック収益は経済連動なので、固定値の加算ではなく
+  `CLICK_RATE_SHARE` の係数を上げる形にしないと機能しない
+- ゴールデンクッキー相当のランダム出現ボーナス（一時バフ）
 - オンラインランキング、実績/バッジ、サウンド
 - 複数購入（x10 / max）
