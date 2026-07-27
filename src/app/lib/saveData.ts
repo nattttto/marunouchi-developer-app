@@ -37,7 +37,8 @@ export function createInitialState(): GameState {
     points: 0,
     totalEarned: 0,
     owned: Object.fromEntries(ASSETS.map((a) => [a.id, 0])),
-    clickPower: 1,
+    groundworkClicks: 0,
+    completions: 0,
     lastSavedAt: Date.now(),
   };
 }
@@ -67,7 +68,8 @@ function normalize(raw: unknown): GameState | null {
     points: toSafeNumber(data.points, 0),
     totalEarned: toSafeNumber(data.totalEarned, 0),
     owned,
-    clickPower: Math.max(1, toSafeNumber(data.clickPower, 1)),
+    groundworkClicks: Math.floor(toSafeNumber(data.groundworkClicks, 0)),
+    completions: Math.floor(toSafeNumber(data.completions, 0)),
     lastSavedAt: toSafeNumber(data.lastSavedAt, Date.now()),
   };
 }

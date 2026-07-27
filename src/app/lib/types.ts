@@ -64,7 +64,12 @@ export type MultiplierTier = {
   multiplier: number;
 };
 
-/** セーブ・復元されるゲーム状態のすべて */
+/**
+ * セーブ・復元されるゲーム状態のすべて。
+ *
+ * 1クリックの獲得量はここに持たない。秒間収益から導出する（`getClickPower`）ので、
+ * 保存すると二重管理になる。
+ */
 export type GameState = {
   /** 所持PT */
   points: number;
@@ -72,8 +77,10 @@ export type GameState = {
   totalEarned: number;
   /** 事業ID -> 保有数 */
   owned: Record<string, number>;
-  /** 1クリックあたりの獲得量 */
-  clickPower: number;
+  /** 現在の着工ゲージに溜まっているクリック数 */
+  groundworkClicks: number;
+  /** 竣工した回数。次のゲージの必要クリック数を決める */
+  completions: number;
   /** 最終保存時刻(epoch ms)。オフライン収益の計算に使う */
   lastSavedAt: number;
 };

@@ -1,8 +1,14 @@
 import {
   ASSETS,
+  BASE_CLICK_POWER,
   CATEGORIES,
   CATEGORY_TIERS,
+  CLICK_RATE_SHARE,
+  COMPLETION_BONUS_FLOOR_PER_CLICK,
+  COMPLETION_BONUS_SECONDS,
   GOAL_COUNT_PER_ASSET,
+  GROUNDWORK_BASE_GOAL,
+  GROUNDWORK_GOAL_GROWTH,
   GROUP_SYNERGY_TIERS,
   MAX_SILHOUETTES_PER_ASSET,
   OWNED_PER_SILHOUETTE,
@@ -111,6 +117,36 @@ export function getTotalRate(
       (owned[asset.id] ?? 0) *
         getEffectiveProduction(asset, categoryMultipliers, groupMultiplier),
     0
+  );
+}
+
+/**
+ * 1クリックの獲得量。基礎値＋秒間収益の一定割合。
+ * 経済に連動するので、放置収益が伸びてもクリックが無意味にならない。
+ */
+export function getClickPower(totalRate: number): number {
+  return BASE_CLICK_POWER + totalRate * CLICK_RATE_SHARE;
+}
+
+/**
+ * 次の竣工までに必要な着工ゲージのクリック数。
+ * 竣工を重ねるごとに緩やかに増える。
+ */
+export function getGroundworkGoal(completions: number): number {
+  return Math.ceil(
+    GROUNDWORK_BASE_GOAL * Math.pow(GROUNDWORK_GOAL_GROWTH, completions)
+  );
+}
+
+/**
+ * 竣工ボーナスの獲得PT。
+ * 基本は「秒間収益の COMPLETION_BONUS_SECONDS 秒ぶん」だが、
+ * 秒間収益がまだ 0 に近い序盤でも意味を持つよう、必要クリック数に応じた下限を設ける。
+ */
+export function getCompletionBonus(totalRate: number, goalClicks: number): number {
+  return Math.max(
+    totalRate * COMPLETION_BONUS_SECONDS,
+    goalClicks * COMPLETION_BONUS_FLOOR_PER_CLICK
   );
 }
 

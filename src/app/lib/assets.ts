@@ -332,6 +332,31 @@ export const GROUP_SYNERGY_TIERS: MultiplierTier[] = [
   { threshold: 2, multiplier: 1.1 },
 ];
 
+/** 1クリックの基礎獲得量 */
+export const BASE_CLICK_POWER = 1;
+
+/**
+ * 1クリックで得られる秒間収益の割合。
+ * 固定値だと放置収益が指数的に伸びた時点でクリックが無意味になるため、
+ * クリック収益を経済に連動させて「常に秒間収益の数秒ぶん」の価値を保たせる。
+ */
+export const CLICK_RATE_SHARE = 0.02;
+
+/** 着工ゲージの初期必要クリック数 */
+export const GROUNDWORK_BASE_GOAL = 25;
+
+/** 竣工1回ごとに必要クリック数へ掛かる倍率 */
+export const GROUNDWORK_GOAL_GROWTH = 1.15;
+
+/** 竣工ボーナスで得られる秒間収益の秒数 */
+export const COMPLETION_BONUS_SECONDS = 180;
+
+/**
+ * 竣工ボーナスの下限（必要クリック数 × この値）。
+ * 秒間収益がまだ 0 に近い序盤でもボーナスが意味を持つようにするため。
+ */
+export const COMPLETION_BONUS_FLOOR_PER_CLICK = 3;
+
 /** 「グループ展開率 100%」に必要な1事業あたりの保有数 */
 export const GOAL_COUNT_PER_ASSET = 10;
 

@@ -13,8 +13,11 @@ import { IS_DEV } from "../lib/env";
 import {
   getCategoryCounts,
   getCategoryMultipliers,
+  getClickPower,
+  getCompletionBonus,
   getCost,
   getEffectiveProduction,
+  getGroundworkGoal,
   getGroupSynergyMultiplier,
   getTotalRate,
   isUnlocked,
@@ -50,12 +53,34 @@ function reducer(state: GameState, action: Action): GameState {
     case "load":
       return action.state;
 
-    case "click":
+    /**
+     * クリック1回。獲得量は秒間収益から導出する。
+     * あわせて着工ゲージを1進め、目標に達したら竣工ボーナスをまとめて加算する。
+     */
+    case "click": {
+      const rate = getTotalRate(ASSETS, state.owned);
+      const gain = getClickPower(rate);
+      const clicks = state.groundworkClicks + 1;
+      const goal = getGroundworkGoal(state.completions);
+
+      if (clicks < goal) {
+        return {
+          ...state,
+          points: state.points + gain,
+          totalEarned: state.totalEarned + gain,
+          groundworkClicks: clicks,
+        };
+      }
+
+      const bonus = getCompletionBonus(rate, goal);
       return {
         ...state,
-        points: state.points + state.clickPower,
-        totalEarned: state.totalEarned + state.clickPower,
+        points: state.points + gain + bonus,
+        totalEarned: state.totalEarned + gain + bonus,
+        groundworkClicks: 0,
+        completions: state.completions + 1,
       };
+    }
 
     case "tick": {
       const gained = getTotalRate(ASSETS, state.owned) * action.seconds;
@@ -191,6 +216,9 @@ export function useGame() {
       );
     }
 
+    const totalRate = getTotalRate(ASSETS, owned);
+    const groundworkGoal = getGroundworkGoal(state.completions);
+
     return {
       categoryCounts: getCategoryCounts(owned),
       categoryMultipliers,
@@ -198,7 +226,10 @@ export function useGame() {
       costs,
       unlocked,
       effectiveProduction,
-      totalRate: getTotalRate(ASSETS, owned),
+      totalRate,
+      clickPower: getClickPower(totalRate),
+      groundworkGoal,
+      completionBonus: getCompletionBonus(totalRate, groundworkGoal),
     };
   }, [state]);
 
