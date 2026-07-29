@@ -1,4 +1,10 @@
-import type { Asset, Category, CategoryId, MultiplierTier } from "./types";
+import type {
+  Asset,
+  Category,
+  CategoryId,
+  MapStage,
+  MultiplierTier,
+} from "./types";
 
 /**
  * 事業カテゴリと事業マスタ。バランス調整は基本このファイルだけで済むようにしてある。
@@ -27,7 +33,7 @@ export const CATEGORY_MAP: Record<CategoryId, Category> = Object.fromEntries(
  *
  * `color` はカテゴリごとに色系統を揃えてある（オフィス=青灰、商業・ホテル=テラコッタ、
  * 住宅=セージ、インフラ=石、設計・サービス=藤、海外=真鍮）。
- * スカイラインを見たときにどの事業が伸びているか分かるようにするため。
+ * マップを見たときにどの事業が伸びているか色で分かるようにするため。
  *
  * **明るい背景の上に描くので、上位の事業ほど濃い色にしてある。**
  * 暗い背景のときとは明度の向きが逆なので、テーマを変えるときは合わせて反転させること。
@@ -370,13 +376,27 @@ export const GOAL_COUNT_PER_ASSET = 10;
 export const GROWTH_STAGE_THRESHOLDS = [5, 10] as const;
 
 /**
- * 手前の列に置ける事業の数。ここから溢れた下位の事業は奥の列へ下がる。
- * **間引きはしない。** 育てたものが消えるのは積み上げた感覚と真逆になる。
+ * 竣工でできた区画の ID。事業ではないので `ASSET_MAP` には無い。
+ * `GameState.placements` にこの ID で並び、マップでは無地の区画として描かれる。
  */
-export const FRONT_ROW_CAPACITY = 10;
+export const COMPLETION_TILE_ID = "_completion";
 
-/** 主棟の背後に重ねる副棟の上限。保有数の多さを密度で見せる */
-export const MAX_BACK_BUILDINGS = 3;
+/**
+ * マップのズーム段階。区画が `gridRadius` まで広がると次の段階へ引く。
+ *
+ * 段階が上がる瞬間に1区画の大きさが一気に縮み、画面に余白ができる。
+ * 連続でジワジワ縮めると自分が広げている感覚が薄れるので、
+ * **節目で1回だけガクッと引く**形にしてある。
+ *
+ * 半径 r の段階を埋めきるのに必要な区画数は (2r+1)^2。
+ * 順に 169 / 729 / 2809 / 8281 区画。
+ */
+export const MAP_STAGES: MapStage[] = [
+  { id: "marunouchi", name: "丸の内", unitLabel: "1棟", gridRadius: 6 },
+  { id: "tokyo", name: "東京", unitLabel: "1街区", gridRadius: 13 },
+  { id: "japan", name: "日本", unitLabel: "1都市", gridRadius: 26 },
+  { id: "world", name: "世界", unitLabel: "1都市", gridRadius: 45 },
+];
 
-/** 何件保有するごとに副棟を1棟増やすか */
-export const OWNED_PER_BACK_BUILDING = 3;
+/** 何マスごとに道路を通すか */
+export const MAP_ROAD_EVERY = 4;

@@ -1,0 +1,193 @@
+import { ASSET_MAP, MAP_STAGES } from "./assets";
+import { getGrowthStage } from "./gameLogic";
+import type { AssetShape, MapStage } from "./types";
+
+/**
+ * 保有状況から「見下ろしマップの配置」を組み立てる純粋関数。
+ * canvas にも DOM にも依存しないので、描画側と切り離してテストできる。
+ *
+ * 設計の要点：
+ * - **中心から渦巻き（スパイラル）に外へ置く。** 丸の内から広がっていく形になり、
+ *   一度置いた区画は二度と動かない
+ * - **間引かない・並べ替えない。** 区画の並びは `GameState.placements`（取得順）が
+ *   そのまま index になる。安い事業を買い足しても既存の区画はずれない
+ * - **ズームは段階ごとに1回だけ引く。** 連続で縮めると自分が広げている感覚が薄れる
+ */
+
+/** 区画1つぶんの余白の割合（1マスに対して、建物が占めない外周） */
+const PLOT_INSET = 0.22;
+
+/** shape ごとの敷地の広さ。真上から見たときの占有率 */
+const SHAPE_FOOTPRINT: Record<AssetShape, number> = {
+  tower: 0.72,
+  midrise: 0.84,
+  lowrise: 1,
+  airport: 1,
+};
+
+/** 成長段階ごとに敷地へ足す割合。保有数が増えると区画そのものが太る */
+const STAGE_GROWTH: Record<1 | 2 | 3, number> = { 1: 1, 2: 1.08, 3: 1.16 };
+
+export type MapTile = {
+  /** 事業ID。竣工でできた区画は `COMPLETION_TILE_ID` */
+  id: string;
+  /** 建物の左上（論理px） */
+  x: number;
+  y: number;
+  /** 建物の一辺（論理px） */
+  size: number;
+  /** 事業色。竣工区画は null（描画側でパレットの色を使う） */
+  color: string | null;
+  /** 影の長さ（論理px）。見下ろしでは影の長さが高さを表す */
+  shadow: number;
+  /** 保有数から決まる成長段階 */
+  stage: 1 | 2 | 3;
+  /** 滑走路の帯を引くか（空港） */
+  runway: boolean;
+};
+
+/** 次に建つ区画（着工中）。タップのたびにここが埋まっていく */
+export type PendingPlot = {
+  x: number;
+  y: number;
+  size: number;
+  /** 着工ゲージの進み具合(0〜1) */
+  progress: number;
+};
+
+export type MapScene = {
+  width: number;
+  height: number;
+  /** 1マスの大きさ（論理px）。段階が上がると小さくなる */
+  cell: number;
+  /** マス目の中心（論理px） */
+  originX: number;
+  originY: number;
+  stage: MapStage;
+  stageIndex: number;
+  tiles: MapTile[];
+  pending: PendingPlot;
+};
+
+/**
+ * スパイラル上の index から座標（マス）を求める。
+ *
+ * index 0 が中心で、そこから右→下→左→上と外向きに巻いていく。
+ * 半径 r のリングは index (2r-1)^2 〜 (2r+1)^2-1 を占める。
+ * 逐次でたどらず閉じた式で出すので、何番目でも O(1) で引ける。
+ */
+export function spiralAt(index: number): { gx: number; gy: number } {
+  if (index <= 0) return { gx: 0, gy: 0 };
+
+  let r = Math.floor((Math.sqrt(index) + 1) / 2);
+  // 平方根の丸め誤差でリングを1つ跨ぐことがあるので、両側から詰める
+  while ((2 * r + 1) ** 2 <= index) r++;
+  while (r > 0 && (2 * r - 1) ** 2 > index) r--;
+
+  const p = index - (2 * r - 1) ** 2;
+  if (p <= 2 * r - 1) return { gx: r, gy: 1 - r + p };
+  if (p <= 4 * r - 1) return { gx: r - (p - 2 * r + 1), gy: r };
+  if (p <= 6 * r - 1) return { gx: -r, gy: r - (p - 4 * r + 1) };
+  return { gx: -r + (p - 6 * r + 1), gy: -r };
+}
+
+/** `count` 個の区画を置いたときに必要なリングの半径 */
+export function ringRadiusFor(count: number): number {
+  if (count <= 1) return 0;
+  const { gx, gy } = spiralAt(count - 1);
+  return Math.max(Math.abs(gx), Math.abs(gy));
+}
+
+/**
+ * 区画数からズーム段階を決める。
+ * 着工中の区画も数に入れる（次の1つでリングが増えるなら、先に引いておく）。
+ */
+export function resolveStageIndex(count: number): number {
+  const radius = ringRadiusFor(count + 1);
+  const index = MAP_STAGES.findIndex((s) => s.gridRadius >= radius);
+  return index === -1 ? MAP_STAGES.length - 1 : index;
+}
+
+/** 建物1つぶんの大きさと影の長さを、事業と保有数から決める */
+function plotOf(id: string, owned: Record<string, number>, cell: number) {
+  const asset = ASSET_MAP[id];
+  const inner = cell * (1 - PLOT_INSET);
+
+  if (!asset) {
+    // 竣工区画。事業ではないので控えめな正方形にしておく
+    return { size: Math.max(1, inner * 0.7), shadow: 1, stage: 1 as const };
+  }
+
+  const stage = getGrowthStage(owned[asset.id] ?? 0);
+  const size = inner * SHAPE_FOOTPRINT[asset.shape] * STAGE_GROWTH[stage];
+
+  return {
+    size: Math.max(1, Math.min(cell, size)),
+    // 高い事業ほど影が長い。見下ろしで高さを伝える唯一の手がかり
+    shadow: Math.max(1, Math.round(1 + asset.heightRatio * (cell >= 6 ? 2 : 1))),
+    stage,
+  };
+}
+
+/**
+ * 保有状況とキャンバスの論理サイズからマップの配置を作る。
+ *
+ * @param placements 取得順に並んだ区画（`GameState.placements`）
+ * @param owned      成長段階を決めるための保有数
+ * @param progress   着工ゲージの進み具合(0〜1)
+ */
+export function buildMapScene(
+  placements: string[],
+  owned: Record<string, number>,
+  progress: number,
+  width: number,
+  height: number
+): MapScene {
+  const stageIndex = resolveStageIndex(placements.length);
+  const stage = MAP_STAGES[stageIndex];
+
+  // 段階の半径ぶんが必ず画面に収まるようにマス目を決める。
+  // 短いほうの辺で割るので、縦横どちらでも切れない
+  const cell = Math.min(width, height) / (stage.gridRadius * 2 + 2);
+  const originX = width / 2;
+  const originY = height / 2;
+
+  const tiles: MapTile[] = [];
+  for (let i = 0; i < placements.length; i++) {
+    const id = placements[i];
+    const { gx, gy } = spiralAt(i);
+    const { size, shadow, stage: growth } = plotOf(id, owned, cell);
+    const asset = ASSET_MAP[id];
+
+    tiles.push({
+      id,
+      x: originX + gx * cell - size / 2,
+      y: originY + gy * cell - size / 2,
+      size,
+      color: asset?.color ?? null,
+      shadow,
+      stage: growth,
+      runway: asset?.shape === "airport" && size >= 5,
+    });
+  }
+
+  const next = spiralAt(placements.length);
+  const pendingSize = Math.max(1, cell * (1 - PLOT_INSET) * 0.8);
+
+  return {
+    width,
+    height,
+    cell,
+    originX,
+    originY,
+    stage,
+    stageIndex,
+    tiles,
+    pending: {
+      x: originX + next.gx * cell - pendingSize / 2,
+      y: originY + next.gy * cell - pendingSize / 2,
+      size: pendingSize,
+      progress: Math.min(1, Math.max(0, progress)),
+    },
+  };
+}

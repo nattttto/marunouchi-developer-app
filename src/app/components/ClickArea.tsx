@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatNumber } from "../lib/gameLogic";
-import PixelCity from "./PixelCity";
+import PixelMap from "./PixelMap";
 
 type Props = {
   owned: Record<string, number>;
+  /** 取得順に並んだ区画（`GameState.placements`） */
+  placements: string[];
   /** 1クリックの獲得量（秒間収益から導出された値） */
   clickPower: number;
   /** 現在の着工ゲージに溜まっているクリック数 */
@@ -33,11 +35,12 @@ const MAX_FLOATERS = 14;
 const FLOATER_LIFETIME_MS = 900;
 
 /**
- * 中央の着工エリア。エリア全体がクリック対象で、背景にスカイラインが伸びる。
+ * 中央の着工エリア。エリア全体がクリック対象で、背景に見下ろしのマップが広がる。
  * 上部に着工ゲージを出し、溜まりきったクリックで竣工ボーナスが入る。
  */
 export default function ClickArea({
   owned,
+  placements,
   clickPower,
   groundworkClicks,
   groundworkGoal,
@@ -94,13 +97,14 @@ export default function ClickArea({
       type="button"
       onClick={handleClick}
       aria-label={`着工する（+${formatNumber(clickPower)} PT、竣工まであと${remaining}回）`}
-      className="from-sky-top via-sky-mid to-sky-low group relative w-full flex-1 cursor-pointer overflow-hidden bg-gradient-to-b text-left"
+      className="bg-ground group relative w-full flex-1 cursor-pointer overflow-hidden text-left"
     >
-      {/* 地平線あたりの陽だまり */}
-      <div className="daylight from-brick/15 pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent" />
-
-      {/* 地面・道路・街路樹まで canvas 側で描く */}
-      <PixelCity owned={owned} />
+      {/* 地面・道路・区画まで canvas 側で描く */}
+      <PixelMap
+        placements={placements}
+        owned={owned}
+        progress={groundworkClicks / groundworkGoal}
+      />
 
       {/*
         着工ゲージ。背の高いビルと重なると読めなくなるので、

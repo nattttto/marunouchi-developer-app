@@ -12,21 +12,16 @@
   --color-surface: #ffffff;
   --color-surface-alt: #fdfbf7;
 
-  /* 着工エリア。上が空、下へ向かって地面の色に寄せる */
-  --color-sky-top: #e9eff2;
-  --color-sky-mid: #f0eadf;
-  --color-sky-low: #e8dfd0;
+  /* マップの地面 */
   --color-ground: #cfc3ae;
 
-  /* 街の描画用。canvas からは getComputedStyle で読むので、色はここに集約したまま */
+  /* マップの描画用。canvas からは getComputedStyle で読むので、色はここに集約したまま */
   --color-road: #b9ad97;
   --color-road-line: #e4dbc8;
-  --color-sidewalk: #c6baa4;
-  --color-tree: #6e8f72;
-  --color-tree-light: #7fa080;
-  --color-trunk: #8a7a5e;
-  --color-lamp: #918977;
-  --color-lamp-head: #c2a05e;
+  /* 建物が落とす影。見下ろしでは影の長さだけが高さを伝える */
+  --color-plot-shadow: #a99c86;
+  /* 竣工でできた区画（事業色を持たない） */
+  --color-plot: #bcae95;
 
   --color-line: #e5ded2;
   --color-line-strong: #d6cbb9;
@@ -103,26 +98,7 @@ body {
   animation: float-up 0.9s ease-out forwards;
 }
 
-/* --- 地平線あたりの陽の揺らぎ ---------------------------------- */
-
-@keyframes daylight {
-  0%,
-  100% {
-    opacity: 0.45;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-.daylight {
-  animation: daylight 8s ease-in-out infinite;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .daylight {
-    animation: none;
-  }
   .float-up {
     animation-duration: 0.4s;
   }

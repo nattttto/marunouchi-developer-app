@@ -61,9 +61,14 @@ export default function Home() {
         categoryMultipliers={categoryMultipliers}
       />
 
-      <div className="relative flex shrink-0 basis-[36dvh] flex-col">
+      {/*
+        見下ろしマップは正方形に近いほど区画が見渡せる。
+        縦に取りすぎるとショップが窮屈になるので 44dvh で折り合わせている。
+      */}
+      <div className="relative flex shrink-0 basis-[44dvh] flex-col">
         <ClickArea
           owned={state.owned}
+          placements={state.placements}
           clickPower={clickPower}
           groundworkClicks={state.groundworkClicks}
           groundworkGoal={groundworkGoal}

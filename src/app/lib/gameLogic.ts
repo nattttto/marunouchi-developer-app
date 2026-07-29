@@ -11,8 +11,7 @@ import {
   GROUNDWORK_GOAL_GROWTH,
   GROUP_SYNERGY_TIERS,
   GROWTH_STAGE_THRESHOLDS,
-  MAX_BACK_BUILDINGS,
-  OWNED_PER_BACK_BUILDING,
+  COMPLETION_TILE_ID,
 } from "./assets";
 import type { Asset, CategoryId, MultiplierTier } from "./types";
 
@@ -174,13 +173,42 @@ export function getGrowthStage(ownedCount: number): 1 | 2 | 3 {
   return 1;
 }
 
-/** 主棟の背後に重ねる副棟の数。保有数の多さを密度で見せる */
-export function getBackBuildingCount(ownedCount: number): number {
-  if (ownedCount <= 0) return 0;
-  return Math.min(
-    MAX_BACK_BUILDINGS,
-    Math.ceil(ownedCount / OWNED_PER_BACK_BUILDING) - 1
+/**
+ * 区画の並び（`placements`）を `owned` / `completions` と突き合わせて整える。
+ *
+ * 並び順そのものは保存された順を尊重しつつ、**数は必ず `owned` 側に合わせる**。
+ * こうしておけば、事業マスタを増減しても・セーブが古くても・
+ * placements が丸ごと無くても、マップは必ず保有状況どおりに描ける。
+ *
+ * 記録が足りないぶん（古いセーブや初回移行）は末尾に足す。
+ * 取得順が分からない以上、安い事業から順に並べるのが実際の取得順に一番近い。
+ */
+export function normalizePlacements(
+  saved: unknown,
+  owned: Record<string, number>,
+  completions: number
+): string[] {
+  const remaining = new Map<string, number>(
+    ASSETS.map((a) => [a.id, Math.max(0, Math.floor(owned[a.id] ?? 0))])
   );
+  remaining.set(COMPLETION_TILE_ID, Math.max(0, Math.floor(completions)));
+
+  const placements: string[] = [];
+  if (Array.isArray(saved)) {
+    for (const id of saved) {
+      if (typeof id !== "string") continue;
+      const left = remaining.get(id);
+      // 知らない事業と、保有数を超えたぶんは捨てる
+      if (!left) continue;
+      remaining.set(id, left - 1);
+      placements.push(id);
+    }
+  }
+
+  for (const [id, left] of remaining) {
+    for (let i = 0; i < left; i++) placements.push(id);
+  }
+  return placements;
 }
 
 const LARGE_UNITS = [

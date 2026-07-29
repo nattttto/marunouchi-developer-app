@@ -1,11 +1,16 @@
 "use client";
 
 import { memo, useEffect, useRef, useState } from "react";
-import { drawCity, readCityPalette } from "../lib/cityRender";
-import { buildCityScene } from "../lib/cityScene";
+import { drawMap, readMapPalette } from "../lib/mapRender";
+import { buildMapScene } from "../lib/mapScene";
 
 type Props = {
+  /** 取得順に並んだ区画（`GameState.placements`） */
+  placements: string[];
+  /** 成長段階を決めるための保有数 */
   owned: Record<string, number>;
+  /** 着工ゲージの進み具合(0〜1) */
+  progress: number;
 };
 
 /**
@@ -15,12 +20,12 @@ type Props = {
 const PIXEL_SCALE = 3;
 
 /**
- * 保有している事業を街として描く canvas。
+ * 保有している事業を見下ろしのマップとして描く canvas。
  *
  * 論理解像度を container のサイズから毎回決め直しているので、
  * 画面幅が変わってもドットが正方形のまま保たれる（CSS で引き伸ばさない）。
  */
-function PixelCity({ owned }: Props) {
+function PixelMap({ placements, owned, progress }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -60,12 +65,12 @@ function PixelCity({ owned }: Props) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    drawCity(
+    drawMap(
       ctx,
-      buildCityScene(owned, logicalWidth, logicalHeight),
-      readCityPalette(canvas)
+      buildMapScene(placements, owned, progress, logicalWidth, logicalHeight),
+      readMapPalette(canvas)
     );
-  }, [owned, size]);
+  }, [placements, owned, progress, size]);
 
   return (
     <div ref={wrapRef} className="pointer-events-none absolute inset-0">
@@ -78,4 +83,4 @@ function PixelCity({ owned }: Props) {
   );
 }
 
-export default memo(PixelCity);
+export default memo(PixelMap);

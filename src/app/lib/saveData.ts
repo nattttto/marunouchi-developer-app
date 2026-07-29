@@ -1,5 +1,5 @@
 import { ASSETS } from "./assets";
-import { getTotalRate } from "./gameLogic";
+import { getTotalRate, normalizePlacements } from "./gameLogic";
 import type { GameState } from "./types";
 
 /**
@@ -37,6 +37,7 @@ export function createInitialState(): GameState {
     points: 0,
     totalEarned: 0,
     owned: Object.fromEntries(ASSETS.map((a) => [a.id, 0])),
+    placements: [],
     groundworkClicks: 0,
     completions: 0,
     lastSavedAt: Date.now(),
@@ -64,12 +65,17 @@ function normalize(raw: unknown): GameState | null {
   for (const asset of ASSETS) {
     owned[asset.id] = Math.floor(toSafeNumber(data.owned?.[asset.id], 0));
   }
+  const completions = Math.floor(toSafeNumber(data.completions, 0));
+
   return {
     points: toSafeNumber(data.points, 0),
     totalEarned: toSafeNumber(data.totalEarned, 0),
     owned,
+    // 区画の並びは owned / completions と数を突き合わせて整える。
+    // placements を持たない旧セーブも、ここで安い事業順に組み立て直される
+    placements: normalizePlacements(data.placements, owned, completions),
     groundworkClicks: Math.floor(toSafeNumber(data.groundworkClicks, 0)),
-    completions: Math.floor(toSafeNumber(data.completions, 0)),
+    completions,
     lastSavedAt: toSafeNumber(data.lastSavedAt, Date.now()),
   };
 }
