@@ -103,7 +103,8 @@ export default function ClickArea({
       <PixelMap
         placements={placements}
         owned={owned}
-        progress={groundworkClicks / groundworkGoal}
+        groundworkClicks={groundworkClicks}
+        groundworkGoal={groundworkGoal}
       />
 
       {/*
@@ -137,6 +138,18 @@ export default function ClickArea({
           </p>
         </div>
       </div>
+
+      {/* 指を置いた場所に返す波紋。数字より先に、触れた実感を返すのが役目 */}
+      {floaters.map((f) => (
+        <span
+          key={`ripple-${f.id}`}
+          aria-hidden="true"
+          className={`ripple border-brick pointer-events-none absolute rounded-full border-2 ${
+            f.bonus === null ? "h-10 w-10" : "h-16 w-16"
+          }`}
+          style={{ left: f.x, top: f.y }}
+        />
+      ))}
 
       {floaters.map((f) => (
         <span

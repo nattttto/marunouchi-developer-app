@@ -180,8 +180,16 @@ function drawTile(
   }
 }
 
+/** クレーンのブームが伸びる向き（右→下→左→上） */
+const CRANE_DIRECTIONS = [
+  [1, 0],
+  [0, 1],
+  [-1, 0],
+  [0, -1],
+] as const;
+
 /**
- * 着工中の区画。枠を先に立てて、ゲージの進みぶんだけ下から埋まる。
+ * 着工中の区画。更地に杭を打ち、ゲージの進みぶんだけ躯体が下から立ち上がる。
  * 竣工を待たずに、1タップごとに必ずここが動く。
  */
 function drawPending(
@@ -189,20 +197,82 @@ function drawPending(
   scene: MapScene,
   palette: MapPalette
 ): void {
-  const { x, y, size, progress } = scene.pending;
+  const { x, y, size, progress, craneFacing } = scene.pending;
   if (size < 2) return;
 
-  const filled = Math.round(size * progress);
-  px(ctx, x, y + size - filled, size, filled, shade(palette.plot, 1.06));
+  // 更地。まだ何も無いことが分かるよう、地面より少し明るく均す
+  px(ctx, x, y, size, size, shade(palette.plot, 1.12));
 
-  // 枠は上辺と左辺だけ。四方を囲うと小さいマスでは中が潰れる
+  // 躯体。下から立ち上がる
+  const filled = Math.round(size * progress);
+  px(ctx, x, y + size - filled, size, filled, shade(palette.plot, 0.92));
+
+  // 足場の横棒。躯体の上に2px おきで引くと組み上がっていく途中に見える
+  if (size >= 5) {
+    for (let line = y + size - filled + 1; line < y + size - 1; line += 2) {
+      px(ctx, x, line, size, 1, shade(palette.plot, 0.78));
+    }
+  }
+
+  // 縄張り。上辺と左辺だけにする。四方を囲うと小さいマスでは中が潰れる
   px(ctx, x, y, size, 1, palette.accent);
   px(ctx, x, y, 1, size, palette.accent);
 
-  // クレーンのブーム。1マスが大きいときだけ立てる
-  if (size >= 5) {
-    px(ctx, x + 1, y - 2, 1, 2, palette.accent);
-  }
+  if (size < 4) return;
+
+  // クレーン。マストは左上に立て、ブームは1タップごとに向きを変える
+  const [dx, dy] = CRANE_DIRECTIONS[craneFacing];
+  const mastX = x + 1;
+  const mastY = y - 1;
+  const reach = Math.max(2, Math.round(size * 0.7));
+
+  px(ctx, mastX, mastY, 1, 2, palette.accent);
+  px(
+    ctx,
+    dx < 0 ? mastX - reach : mastX,
+    dy < 0 ? mastY - reach : mastY,
+    dx === 0 ? 1 : reach,
+    dy === 0 ? 1 : reach,
+    palette.accent
+  );
+}
+
+/**
+ * 区画が増えた瞬間の光。区画から四角い波が広がって消える。
+ *
+ * @param t 0（発生）〜1（消滅）
+ * @param strong 竣工のときだけ true。購入より一段強く出す
+ */
+export function drawPlacementFlash(
+  ctx: CanvasRenderingContext2D,
+  plot: { x: number; y: number; size: number },
+  t: number,
+  strong: boolean,
+  palette: MapPalette
+): void {
+  // 後半の段階では区画が数px以下になる。波まで小さくすると見えないので下限を置く
+  const base = Math.max(plot.size, 6);
+  const spread = base * (strong ? 2 : 1.2) * t;
+  const alpha = (strong ? 1 : 0.7) * (1 - t);
+  if (alpha <= 0) return;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  // 置かれた区画そのものを一瞬光らせる。
+  // 1マスが数pxしかない後半でも、波だけでは何が増えたのか分からないため
+  px(ctx, plot.x, plot.y, plot.size, plot.size, shade(palette.accent, 1.25));
+
+  const x = plot.x - spread;
+  const y = plot.y - spread;
+  const side = plot.size + spread * 2;
+  // 塗り潰さず外周1pxだけ。中の区画を隠さずに広がりだけを見せる
+  px(ctx, x, y, side, 1, palette.accent);
+  px(ctx, x, y + side - 1, side, 1, palette.accent);
+  px(ctx, x, y, 1, side, palette.accent);
+  px(ctx, x + side - 1, y, 1, side, palette.accent);
+
+  ctx.restore();
 }
 
 /** シーンを canvas へ描く */

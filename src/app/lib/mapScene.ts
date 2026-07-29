@@ -28,6 +28,15 @@ const SHAPE_FOOTPRINT: Record<AssetShape, number> = {
 /** 成長段階ごとに敷地へ足す割合。保有数が増えると区画そのものが太る */
 const STAGE_GROWTH: Record<1 | 2 | 3, number> = { 1: 1, 2: 1.08, 3: 1.16 };
 
+/**
+ * 着工中の区画の最小サイズ（論理px）。
+ *
+ * 段階が上がると1マスは数px以下まで縮むが、着工中の区画だけはここまで縮めない。
+ * クレーンも足場も潰れてしまい、**タップしても画面が変わらなくなる**ため。
+ * マスより大きくなるぶんには「今ここを開発している」というピンとして読める。
+ */
+const MIN_PENDING_SIZE = 5;
+
 export type MapTile = {
   /** 事業ID。竣工でできた区画は `COMPLETION_TILE_ID` */
   id: string;
@@ -46,13 +55,21 @@ export type MapTile = {
   runway: boolean;
 };
 
-/** 次に建つ区画（着工中）。タップのたびにここが埋まっていく */
+/** 次に建つ区画（着工中）。タップのたびにここが育つ */
 export type PendingPlot = {
   x: number;
   y: number;
   size: number;
   /** 着工ゲージの進み具合(0〜1) */
   progress: number;
+  /**
+   * クレーンの向き(0〜3)。**1タップごとに必ず変わる**のはここだけ。
+   *
+   * 躯体の高さは区画の1辺（数px）を必要クリック数で割ったぶんしか伸びないので、
+   * 数タップに1回しかドットが動かない。タップの手応えを毎回返すために、
+   * 向きだけは1タップ1回転させる。
+   */
+  craneFacing: 0 | 1 | 2 | 3;
 };
 
 export type MapScene = {
@@ -134,12 +151,12 @@ function plotOf(id: string, owned: Record<string, number>, cell: number) {
  *
  * @param placements 取得順に並んだ区画（`GameState.placements`）
  * @param owned      成長段階を決めるための保有数
- * @param progress   着工ゲージの進み具合(0〜1)
+ * @param groundwork 着工ゲージの状態
  */
 export function buildMapScene(
   placements: string[],
   owned: Record<string, number>,
-  progress: number,
+  groundwork: { clicks: number; goal: number },
   width: number,
   height: number
 ): MapScene {
@@ -172,7 +189,7 @@ export function buildMapScene(
   }
 
   const next = spiralAt(placements.length);
-  const pendingSize = Math.max(1, cell * (1 - PLOT_INSET) * 0.8);
+  const pendingSize = Math.max(MIN_PENDING_SIZE, cell * (1 - PLOT_INSET) * 0.8);
 
   return {
     width,
@@ -187,7 +204,11 @@ export function buildMapScene(
       x: originX + next.gx * cell - pendingSize / 2,
       y: originY + next.gy * cell - pendingSize / 2,
       size: pendingSize,
-      progress: Math.min(1, Math.max(0, progress)),
+      progress:
+        groundwork.goal > 0
+          ? Math.min(1, Math.max(0, groundwork.clicks / groundwork.goal))
+          : 0,
+      craneFacing: (Math.max(0, Math.floor(groundwork.clicks)) % 4) as 0 | 1 | 2 | 3,
     },
   };
 }

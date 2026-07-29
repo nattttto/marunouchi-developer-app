@@ -1,7 +1,8 @@
 "use client";
 
 import { memo, useEffect, useRef, useState } from "react";
-import { drawMap, readMapPalette } from "../lib/mapRender";
+import { COMPLETION_TILE_ID } from "../lib/assets";
+import { drawMap, drawPlacementFlash, readMapPalette } from "../lib/mapRender";
 import { buildMapScene } from "../lib/mapScene";
 
 type Props = {
@@ -9,8 +10,10 @@ type Props = {
   placements: string[];
   /** 成長段階を決めるための保有数 */
   owned: Record<string, number>;
-  /** 着工ゲージの進み具合(0〜1) */
-  progress: number;
+  /** 現在の着工ゲージに溜まっているクリック数 */
+  groundworkClicks: number;
+  /** 竣工までに必要なクリック数 */
+  groundworkGoal: number;
 };
 
 /**
@@ -19,16 +22,26 @@ type Props = {
  */
 const PIXEL_SCALE = 3;
 
+/** 区画が増えたときの光の長さ(ms) */
+const FLASH_MS = 520;
+
 /**
  * 保有している事業を見下ろしのマップとして描く canvas。
  *
  * 論理解像度を container のサイズから毎回決め直しているので、
  * 画面幅が変わってもドットが正方形のまま保たれる（CSS で引き伸ばさない）。
  */
-function PixelMap({ placements, owned, progress }: Props) {
+function PixelMap({
+  placements,
+  owned,
+  groundworkClicks,
+  groundworkGoal,
+}: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
+  /** 前回の区画数。増えていれば、その1つが今回置かれたもの */
+  const placedRef = useRef(placements.length);
 
   useEffect(() => {
     const element = wrapRef.current;
@@ -65,12 +78,44 @@ function PixelMap({ placements, owned, progress }: Props) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    drawMap(
-      ctx,
-      buildMapScene(placements, owned, progress, logicalWidth, logicalHeight),
-      readMapPalette(canvas)
+    const scene = buildMapScene(
+      placements,
+      owned,
+      { clicks: groundworkClicks, goal: groundworkGoal },
+      logicalWidth,
+      logicalHeight
     );
-  }, [placements, owned, progress, size]);
+    const palette = readMapPalette(canvas);
+
+    // **マップ本体は必ず同期で描く。** requestAnimationFrame はタブが描画されて
+    // いないと発火しないので、これを描画の起点にするとマップごと消える（実際に踏んだ）。
+    // rAF は光の演出を重ねるためだけに使う
+    drawMap(ctx, scene, palette);
+
+    const grew = placements.length > placedRef.current;
+    placedRef.current = placements.length;
+
+    const placed = grew ? scene.tiles[scene.tiles.length - 1] : undefined;
+    const reduceMotion = window.matchMedia?.(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+    if (!placed || reduceMotion) return;
+
+    // 光っている間だけ回す。止まっている間はフレームを消費しない
+    const strong = placed.id === COMPLETION_TILE_ID;
+    const start = performance.now();
+    let frame = 0;
+
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / FLASH_MS);
+      drawMap(ctx, scene, palette);
+      drawPlacementFlash(ctx, placed, t, strong, palette);
+      if (t < 1) frame = requestAnimationFrame(step);
+    };
+
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [placements, owned, groundworkClicks, groundworkGoal, size]);
 
   return (
     <div ref={wrapRef} className="pointer-events-none absolute inset-0">

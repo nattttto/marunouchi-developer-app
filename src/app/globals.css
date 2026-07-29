@@ -98,8 +98,29 @@ body {
   animation: float-up 0.9s ease-out forwards;
 }
 
+/* --- タップ位置の波紋 ------------------------------------------ */
+
+@keyframes ripple {
+  0% {
+    opacity: 0.55;
+    transform: translate(-50%, -50%) scale(0.25);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.6);
+  }
+}
+
+.ripple {
+  animation: ripple 0.5s ease-out forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .float-up {
     animation-duration: 0.4s;
+  }
+  /* 波紋は動きそのものが役目なので、縮めるのではなく出さない */
+  .ripple {
+    display: none;
   }
 }
