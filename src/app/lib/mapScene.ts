@@ -1,5 +1,12 @@
 import { ASSET_MAP, MAP_STAGES } from "./assets";
 import { getGrowthStage } from "./gameLogic";
+import {
+  getTerrainLayout,
+  terrainAt,
+  TERRAINS,
+  type Terrain,
+  type TerrainLayout,
+} from "./mapTerrain";
 import type { AssetShape, MapStage } from "./types";
 
 /**
@@ -120,9 +127,25 @@ export function ringRadiusFor(count: number): number {
  * 着工中の区画も数に入れる（次の1つでリングが増えるなら、先に引いておく）。
  */
 export function resolveStageIndex(count: number): number {
-  const radius = ringRadiusFor(count + 1);
-  const index = MAP_STAGES.findIndex((s) => s.gridRadius >= radius);
+  const index = MAP_STAGES.findIndex((s) => count <= s.capacity);
   return index === -1 ? MAP_STAGES.length - 1 : index;
+}
+
+/**
+ * その座標に区画を置けるか。
+ *
+ * 地形のある段階では**陸にしか建てない**。海を避けて広がるので、
+ * 日本や世界の形そのものがビルで埋まっていく。
+ * 皇居（`*`）も避ける。開発しない場所があるほうが街として自然に見える。
+ */
+function isBuildable(
+  terrain: Terrain | undefined,
+  layout: TerrainLayout | undefined,
+  x: number,
+  y: number
+): boolean {
+  if (!terrain || !layout) return true;
+  return terrainAt(terrain, layout, x, y) === "#";
 }
 
 /** 建物1つぶんの大きさと影の長さを、事業と保有数から決める */
@@ -169,17 +192,37 @@ export function buildMapScene(
   const originX = width / 2;
   const originY = height / 2;
 
+  const terrain = TERRAINS[stage.id];
+  const layout = terrain ? getTerrainLayout(terrain, width, height) : undefined;
+
+  /**
+   * 渦巻きを進めながら、置ける（＝陸の）マスを1つ返す。
+   * 陸を探して延々と回り続けないよう、走査の上限を切ってある。
+   * 上限に達したら海の上でも置く（＝その段階を埋め尽くした状態）。
+   */
+  let cursor = 0;
+  const limit = (stage.gridRadius * 2 + 3) ** 2 * 2;
+  const nextCell = () => {
+    for (let scanned = 0; scanned < limit; scanned++) {
+      const at = spiralAt(cursor++);
+      const x = originX + at.gx * cell;
+      const y = originY + at.gy * cell;
+      if (isBuildable(terrain, layout, x, y)) return { x, y };
+    }
+    const at = spiralAt(cursor++);
+    return { x: originX + at.gx * cell, y: originY + at.gy * cell };
+  };
+
   const tiles: MapTile[] = [];
-  for (let i = 0; i < placements.length; i++) {
-    const id = placements[i];
-    const { gx, gy } = spiralAt(i);
+  for (const id of placements) {
+    const { x, y } = nextCell();
     const { size, shadow, stage: growth } = plotOf(id, owned, cell);
     const asset = ASSET_MAP[id];
 
     tiles.push({
       id,
-      x: originX + gx * cell - size / 2,
-      y: originY + gy * cell - size / 2,
+      x: x - size / 2,
+      y: y - size / 2,
       size,
       color: asset?.color ?? null,
       shadow,
@@ -188,7 +231,7 @@ export function buildMapScene(
     });
   }
 
-  const next = spiralAt(placements.length);
+  const next = nextCell();
   const pendingSize = Math.max(MIN_PENDING_SIZE, cell * (1 - PLOT_INSET) * 0.8);
 
   return {
@@ -201,8 +244,8 @@ export function buildMapScene(
     stageIndex,
     tiles,
     pending: {
-      x: originX + next.gx * cell - pendingSize / 2,
-      y: originY + next.gy * cell - pendingSize / 2,
+      x: next.x - pendingSize / 2,
+      y: next.y - pendingSize / 2,
       size: pendingSize,
       progress:
         groundwork.goal > 0

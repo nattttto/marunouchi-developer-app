@@ -388,14 +388,29 @@ export const COMPLETION_TILE_ID = "_completion";
  * 連続でジワジワ縮めると自分が広げている感覚が薄れるので、
  * **節目で1回だけガクッと引く**形にしてある。
  *
- * 半径 r の段階を埋めきるのに必要な区画数は (2r+1)^2。
- * 順に 169 / 729 / 2809 / 8281 区画。
+ * `gridRadius` は画面に収まる区画の半径、`capacity` はその段階に居る区画数の上限
+ * （超えると次の段階へ引く）。
+ *
+ * **`capacity` は `gridRadius` から機械的には決まらない。** 区画は陸にしか建たないので、
+ * 実際に置ける数は「広さ × 地形の陸の割合」になる。日本のように陸が細い段階は、
+ * 同じ広さでも入る数がずっと少ない。だから両方を手で持ち、
+ * 「その数で陸がちょうど埋まって見えるか」を目で確かめて調整する。
+ *
+ * 事業のコスト倍率は 1.15〜1.22（1件買うごとに指数的に上がる）で、1事業あたり
+ * 数十件が現実的な上限。21事業ぶんで見て世界まで届く値にしてあるが、
+ * 通しで遊んだデータがまだ無いので、ここは要調整。
  */
 export const MAP_STAGES: MapStage[] = [
-  { id: "marunouchi", name: "丸の内", unitLabel: "1棟", gridRadius: 6 },
-  { id: "tokyo", name: "東京", unitLabel: "1街区", gridRadius: 13 },
-  { id: "japan", name: "日本", unitLabel: "1都市", gridRadius: 26 },
-  { id: "world", name: "世界", unitLabel: "1都市", gridRadius: 45 },
+  { id: "marunouchi", name: "丸の内", unitLabel: "1棟", gridRadius: 6, capacity: 169 },
+  { id: "tokyo", name: "東京", unitLabel: "1街区", gridRadius: 13, capacity: 520 },
+  { id: "japan", name: "日本", unitLabel: "1都市", gridRadius: 30, capacity: 1100 },
+  {
+    id: "world",
+    name: "世界",
+    unitLabel: "1都市",
+    gridRadius: 48,
+    capacity: Number.POSITIVE_INFINITY,
+  },
 ];
 
 /** 何マスごとに道路を通すか */

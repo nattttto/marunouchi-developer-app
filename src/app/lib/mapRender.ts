@@ -1,5 +1,6 @@
 import { MAP_ROAD_EVERY } from "./assets";
 import type { MapScene, MapTile } from "./mapScene";
+import { getTerrainLayout, TERRAINS } from "./mapTerrain";
 
 /**
  * 見下ろしマップをドット絵として canvas に描く。
@@ -24,6 +25,10 @@ export type MapPalette = {
   plot: string;
   /** 着工中の枠。主アクセント色 */
   accent: string;
+  /** 海・湾 */
+  water: string;
+  /** 緑地（皇居） */
+  park: string;
 };
 
 const VAR_NAMES: Record<keyof MapPalette, string> = {
@@ -33,6 +38,8 @@ const VAR_NAMES: Record<keyof MapPalette, string> = {
   shadow: "--color-plot-shadow",
   plot: "--color-plot",
   accent: "--color-brick",
+  water: "--color-water",
+  park: "--color-park",
 };
 
 const FALLBACK = "#cfc3ae";
@@ -95,6 +102,45 @@ function px(
 }
 
 /**
+ * 地形シルエットを敷く。
+ *
+ * 1文字ぶんの矩形は「次の文字の開始位置」との差で幅を出す。
+ * それぞれ独立に丸めると、拡大率が整数でないときに1pxの隙間が並んでしまう。
+ */
+function drawTerrain(
+  ctx: CanvasRenderingContext2D,
+  scene: MapScene,
+  palette: MapPalette
+): void {
+  const terrain = TERRAINS[scene.stage.id];
+  if (!terrain) return;
+
+  const { scale, offsetX, offsetY, cols, rows } = getTerrainLayout(
+    terrain,
+    scene.width,
+    scene.height
+  );
+
+  const colors: Record<string, string> = {
+    "#": palette.ground,
+    "~": palette.water,
+    "*": palette.park,
+  };
+
+  for (let r = 0; r < rows; r++) {
+    const top = Math.round(offsetY + r * scale);
+    const bottom = Math.round(offsetY + (r + 1) * scale);
+    for (let c = 0; c < cols; c++) {
+      const color = colors[terrain.rows[r][c]];
+      if (!color) continue;
+      const left = Math.round(offsetX + c * scale);
+      const right = Math.round(offsetX + (c + 1) * scale);
+      px(ctx, left, top, right - left, bottom - top, color);
+    }
+  }
+}
+
+/**
  * 地面と道路。道路はマス目に合わせて等間隔に通す。
  * マス目そのものが見えると「区画に建てている」ことが伝わる。
  */
@@ -103,7 +149,21 @@ function drawGround(
   scene: MapScene,
   palette: MapPalette
 ): void {
-  px(ctx, 0, 0, scene.width, scene.height, palette.ground);
+  const terrain = TERRAINS[scene.stage.id];
+
+  // 海の上に描く段階（列島・世界地図）は、地面ではなく海で埋める
+  px(
+    ctx,
+    0,
+    0,
+    scene.width,
+    scene.height,
+    terrain?.sea ? palette.water : palette.ground
+  );
+  drawTerrain(ctx, scene, palette);
+
+  // 道路は街として見えている段階だけ。列島や世界地図に街区の道路は引かない
+  if (terrain?.sea) return;
 
   const step = scene.cell * MAP_ROAD_EVERY;
   // 1マスが小さいと道路だけで画面が埋まるので、その段階では引かない

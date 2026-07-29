@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { MAP_STAGES } from "../lib/assets";
 import { formatNumber } from "../lib/gameLogic";
+import { resolveStageIndex } from "../lib/mapScene";
 import PixelMap from "./PixelMap";
 
 type Props = {
@@ -34,6 +36,9 @@ const MAX_FLOATERS = 14;
 /** フローティングテキストが消えるまでの時間(ms)。CSS の float-up と揃える */
 const FLOATER_LIFETIME_MS = 900;
 
+/** 段階到達のテロップが出ている時間(ms)。CSS の telop-in と揃える */
+const TELOP_MS = 1800;
+
 /**
  * 中央の着工エリア。エリア全体がクリック対象で、背景に見下ろしのマップが広がる。
  * 上部に着工ゲージを出し、溜まりきったクリックで竣工ボーナスが入る。
@@ -51,6 +56,26 @@ export default function ClickArea({
   const areaRef = useRef<HTMLButtonElement>(null);
   const nextIdRef = useRef(0);
   const timersRef = useRef<number[]>([]);
+
+  const stageIndex = resolveStageIndex(placements.length);
+  /** 段階が上がった直後だけ入る。ズームアウトとテロップの両方に使う */
+  const [arrival, setArrival] = useState<{ index: number; zoomFrom: number } | null>(
+    null
+  );
+  const prevStageRef = useRef(stageIndex);
+
+  useEffect(() => {
+    const from = prevStageRef.current;
+    prevStageRef.current = stageIndex;
+    if (stageIndex <= from) return;
+
+    // 1マスの大きさは (半径×2+2) に反比例する。その比がそのまま引きの量になる
+    const span = (i: number) => MAP_STAGES[i].gridRadius * 2 + 2;
+    setArrival({ index: stageIndex, zoomFrom: span(stageIndex) / span(from) });
+
+    const timer = window.setTimeout(() => setArrival(null), TELOP_MS);
+    return () => window.clearTimeout(timer);
+  }, [stageIndex]);
 
   // アンマウント時に消し忘れのタイマーを片付ける
   useEffect(() => {
@@ -99,13 +124,32 @@ export default function ClickArea({
       aria-label={`着工する（+${formatNumber(clickPower)} PT、竣工まであと${remaining}回）`}
       className="bg-ground group relative w-full flex-1 cursor-pointer overflow-hidden text-left"
     >
-      {/* 地面・道路・区画まで canvas 側で描く */}
-      <PixelMap
-        placements={placements}
-        owned={owned}
-        groundworkClicks={groundworkClicks}
-        groundworkGoal={groundworkGoal}
-      />
+      {/*
+        地面・地形・区画まで canvas 側で描く。
+        段階が上がったときの「引き」だけは canvas を描き直さず、
+        CSS の transform で外側から縮める（描画は既に新しい縮尺で済んでいる）。
+      */}
+      <div
+        className={`absolute inset-0 ${arrival ? "zoom-out" : ""}`}
+        style={
+          arrival
+            ? ({ "--zoom-from": arrival.zoomFrom } as React.CSSProperties)
+            : undefined
+        }
+      >
+        <PixelMap
+          placements={placements}
+          owned={owned}
+          groundworkClicks={groundworkClicks}
+          groundworkGoal={groundworkGoal}
+        />
+      </div>
+
+      {arrival && (
+        <span className="telop text-brick-ink bg-canvas/85 pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full px-5 py-2 text-lg font-bold whitespace-nowrap">
+          {MAP_STAGES[arrival.index].name}へ広がった
+        </span>
+      )}
 
       {/*
         着工ゲージ。背の高いビルと重なると読めなくなるので、

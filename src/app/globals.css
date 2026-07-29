@@ -22,6 +22,9 @@
   --color-plot-shadow: #a99c86;
   /* 竣工でできた区画（事業色を持たない） */
   --color-plot: #bcae95;
+  /* 海・湾と、皇居などの緑地 */
+  --color-water: #b9cad2;
+  --color-park: #9fb59a;
 
   --color-line: #e5ded2;
   --color-line-strong: #d6cbb9;
@@ -115,6 +118,46 @@ body {
   animation: ripple 0.5s ease-out forwards;
 }
 
+/* --- 段階到達（丸の内 → 東京 → 日本 → 世界） -------------------- */
+
+/*
+  ズームアウト。canvas は既に新しい縮尺で描き終わっているので、
+  外側を一度だけ拡大しておいて等倍へ戻すと「引いた」ように見える。
+  --zoom-from は段階ごとの縮尺比（1.5〜1.7 倍）を JS から入れる。
+*/
+@keyframes zoom-out {
+  from {
+    transform: scale(var(--zoom-from, 1.6));
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.zoom-out {
+  animation: zoom-out 0.7s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@keyframes telop-in {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 6px));
+  }
+  15%,
+  75% {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%);
+  }
+}
+
+.telop {
+  animation: telop-in 1.8s ease-out forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .float-up {
     animation-duration: 0.4s;
@@ -122,5 +165,22 @@ body {
   /* 波紋は動きそのものが役目なので、縮めるのではなく出さない */
   .ripple {
     display: none;
+  }
+  /* 引きの演出は消す。テロップは動かさず、出したまま消えるだけにする */
+  .zoom-out {
+    animation: none;
+  }
+  .telop {
+    animation: telop-fade 1.8s ease-out forwards;
+  }
+}
+
+@keyframes telop-fade {
+  0%,
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
   }
 }
