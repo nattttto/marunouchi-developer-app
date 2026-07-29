@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { ASSETS, ASSET_MAP } from "../lib/assets";
+import { ASSETS, ASSET_MAP, COMPLETION_TILE_ID } from "../lib/assets";
 import { IS_DEV } from "../lib/env";
 import {
   getCategoryCounts,
@@ -79,6 +79,8 @@ function reducer(state: GameState, action: Action): GameState {
         totalEarned: state.totalEarned + gain + bonus,
         groundworkClicks: 0,
         completions: state.completions + 1,
+        // 竣工した区画をマップの末尾へ置く。タップの積み重ねが街として残る
+        placements: [...state.placements, COMPLETION_TILE_ID],
       };
     }
 
@@ -112,6 +114,8 @@ function reducer(state: GameState, action: Action): GameState {
         ...state,
         points: state.points - cost,
         owned: { ...state.owned, [asset.id]: count + 1 },
+        // 末尾に足すだけ。既に置いた区画は動かさない（並べ替えない）
+        placements: [...state.placements, asset.id],
       };
     }
 
@@ -125,7 +129,11 @@ function reducer(state: GameState, action: Action): GameState {
       for (const asset of ASSETS) {
         owned[asset.id] = (owned[asset.id] ?? 0) + 1;
       }
-      return { ...state, owned };
+      return {
+        ...state,
+        owned,
+        placements: [...state.placements, ...ASSETS.map((a) => a.id)],
+      };
     }
 
     case "reset":

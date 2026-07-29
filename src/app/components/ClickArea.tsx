@@ -1,11 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { MAP_STAGES } from "../lib/assets";
 import { formatNumber } from "../lib/gameLogic";
-import PixelCity from "./PixelCity";
+import { resolveStageIndex } from "../lib/mapScene";
+import { playArrival, playCompletion, playTap } from "../lib/sound";
+import PixelMap from "./PixelMap";
 
 type Props = {
   owned: Record<string, number>;
+  /** 取得順に並んだ区画（`GameState.placements`） */
+  placements: string[];
   /** 1クリックの獲得量（秒間収益から導出された値） */
   clickPower: number;
   /** 現在の着工ゲージに溜まっているクリック数 */
@@ -32,12 +37,16 @@ const MAX_FLOATERS = 14;
 /** フローティングテキストが消えるまでの時間(ms)。CSS の float-up と揃える */
 const FLOATER_LIFETIME_MS = 900;
 
+/** 段階到達のテロップが出ている時間(ms)。CSS の telop-in と揃える */
+const TELOP_MS = 1800;
+
 /**
- * 中央の着工エリア。エリア全体がクリック対象で、背景にスカイラインが伸びる。
+ * 中央の着工エリア。エリア全体がクリック対象で、背景に見下ろしのマップが広がる。
  * 上部に着工ゲージを出し、溜まりきったクリックで竣工ボーナスが入る。
  */
 export default function ClickArea({
   owned,
+  placements,
   clickPower,
   groundworkClicks,
   groundworkGoal,
@@ -48,6 +57,27 @@ export default function ClickArea({
   const areaRef = useRef<HTMLButtonElement>(null);
   const nextIdRef = useRef(0);
   const timersRef = useRef<number[]>([]);
+
+  const stageIndex = resolveStageIndex(placements.length);
+  /** 段階が上がった直後だけ入る。ズームアウトとテロップの両方に使う */
+  const [arrival, setArrival] = useState<{ index: number; zoomFrom: number } | null>(
+    null
+  );
+  const prevStageRef = useRef(stageIndex);
+
+  useEffect(() => {
+    const from = prevStageRef.current;
+    prevStageRef.current = stageIndex;
+    if (stageIndex <= from) return;
+
+    // 1マスの大きさは (半径×2+2) に反比例する。その比がそのまま引きの量になる
+    const span = (i: number) => MAP_STAGES[i].gridRadius * 2 + 2;
+    setArrival({ index: stageIndex, zoomFrom: span(stageIndex) / span(from) });
+    playArrival();
+
+    const timer = window.setTimeout(() => setArrival(null), TELOP_MS);
+    return () => window.clearTimeout(timer);
+  }, [stageIndex]);
 
   // アンマウント時に消し忘れのタイマーを片付ける
   useEffect(() => {
@@ -69,6 +99,9 @@ export default function ClickArea({
 
       // props はクリック前の状態なので、このクリックで竣工するかを先に判定できる
       const completing = groundworkClicks + 1 >= groundworkGoal;
+
+      if (completing) playCompletion();
+      else playTap((groundworkClicks + 1) / groundworkGoal);
 
       const id = nextIdRef.current++;
       setFloaters((prev) => [
@@ -94,13 +127,34 @@ export default function ClickArea({
       type="button"
       onClick={handleClick}
       aria-label={`着工する（+${formatNumber(clickPower)} PT、竣工まであと${remaining}回）`}
-      className="from-sky-top via-sky-mid to-sky-low group relative w-full flex-1 cursor-pointer overflow-hidden bg-gradient-to-b text-left"
+      className="bg-ground group relative w-full flex-1 cursor-pointer overflow-hidden text-left"
     >
-      {/* 地平線あたりの陽だまり */}
-      <div className="daylight from-brick/15 pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent" />
+      {/*
+        地面・地形・区画まで canvas 側で描く。
+        段階が上がったときの「引き」だけは canvas を描き直さず、
+        CSS の transform で外側から縮める（描画は既に新しい縮尺で済んでいる）。
+      */}
+      <div
+        className={`absolute inset-0 ${arrival ? "zoom-out" : ""}`}
+        style={
+          arrival
+            ? ({ "--zoom-from": arrival.zoomFrom } as React.CSSProperties)
+            : undefined
+        }
+      >
+        <PixelMap
+          placements={placements}
+          owned={owned}
+          groundworkClicks={groundworkClicks}
+          groundworkGoal={groundworkGoal}
+        />
+      </div>
 
-      {/* 地面・道路・街路樹まで canvas 側で描く */}
-      <PixelCity owned={owned} />
+      {arrival && (
+        <span className="telop text-brick-ink bg-canvas/85 pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full px-5 py-2 text-lg font-bold whitespace-nowrap">
+          {MAP_STAGES[arrival.index].name}へ広がった
+        </span>
+      )}
 
       {/*
         着工ゲージ。背の高いビルと重なると読めなくなるので、
@@ -133,6 +187,18 @@ export default function ClickArea({
           </p>
         </div>
       </div>
+
+      {/* 指を置いた場所に返す波紋。数字より先に、触れた実感を返すのが役目 */}
+      {floaters.map((f) => (
+        <span
+          key={`ripple-${f.id}`}
+          aria-hidden="true"
+          className={`ripple border-brick pointer-events-none absolute rounded-full border-2 ${
+            f.bonus === null ? "h-10 w-10" : "h-16 w-16"
+          }`}
+          style={{ left: f.x, top: f.y }}
+        />
+      ))}
 
       {floaters.map((f) => (
         <span

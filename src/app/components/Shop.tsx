@@ -3,6 +3,7 @@
 import { Lock } from "lucide-react";
 import { ASSETS, ASSET_MAP, CATEGORY_MAP } from "../lib/assets";
 import { formatNumber } from "../lib/gameLogic";
+import { playBuy } from "../lib/sound";
 import type { Asset } from "../lib/types";
 
 type Props = {
@@ -71,7 +72,10 @@ function ShopRow({
       <button
         type="button"
         disabled={!affordable}
-        onClick={() => onBuy(asset.id)}
+        onClick={() => {
+          playBuy();
+          onBuy(asset.id);
+        }}
         className={[
           "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors",
           affordable

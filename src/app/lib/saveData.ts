@@ -1,5 +1,5 @@
 import { ASSETS } from "./assets";
-import { getTotalRate } from "./gameLogic";
+import { getTotalRate, normalizePlacements } from "./gameLogic";
 import type { GameState } from "./types";
 
 /**
@@ -9,6 +9,12 @@ import type { GameState } from "./types";
 
 /** 保存キー。セーブ形式を壊す変更をしたら v2, v3... と上げる */
 export const SAVE_KEY = "marunouchi-developer:save:v1";
+
+/**
+ * 消音設定の保存キー。**進行状況とは別のキーに分けてある。**
+ * 端末ごとの好みであって進行ではないので、リセットで巻き込みたくない。
+ */
+const MUTED_KEY = "marunouchi-developer:muted:v1";
 
 /**
  * オフライン収益の上限（秒）。
@@ -37,6 +43,7 @@ export function createInitialState(): GameState {
     points: 0,
     totalEarned: 0,
     owned: Object.fromEntries(ASSETS.map((a) => [a.id, 0])),
+    placements: [],
     groundworkClicks: 0,
     completions: 0,
     lastSavedAt: Date.now(),
@@ -64,12 +71,17 @@ function normalize(raw: unknown): GameState | null {
   for (const asset of ASSETS) {
     owned[asset.id] = Math.floor(toSafeNumber(data.owned?.[asset.id], 0));
   }
+  const completions = Math.floor(toSafeNumber(data.completions, 0));
+
   return {
     points: toSafeNumber(data.points, 0),
     totalEarned: toSafeNumber(data.totalEarned, 0),
     owned,
+    // 区画の並びは owned / completions と数を突き合わせて整える。
+    // placements を持たない旧セーブも、ここで安い事業順に組み立て直される
+    placements: normalizePlacements(data.placements, owned, completions),
     groundworkClicks: Math.floor(toSafeNumber(data.groundworkClicks, 0)),
-    completions: Math.floor(toSafeNumber(data.completions, 0)),
+    completions,
     lastSavedAt: toSafeNumber(data.lastSavedAt, Date.now()),
   };
 }
@@ -95,6 +107,26 @@ export function writeSave(state: GameState): void {
     window.localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
   } catch {
     // 容量超過・プライベートモードなどは黙って諦める（進行は続行させる）
+  }
+}
+
+/** 消音設定を読む。未設定なら音を出す */
+export function loadMuted(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(MUTED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** 消音設定を書く */
+export function writeMuted(muted: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(MUTED_KEY, muted ? "1" : "0");
+  } catch {
+    // 書けなくても音の切り替え自体は効いている
   }
 }
 
