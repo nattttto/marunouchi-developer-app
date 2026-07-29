@@ -8,6 +8,7 @@ import OfflineModal from "./components/OfflineModal";
 import SettingsModal from "./components/SettingsModal";
 import Shop from "./components/Shop";
 import { useGame } from "./hooks/useGame";
+import { useSound } from "./hooks/useSound";
 import { getDevelopmentRate } from "./lib/gameLogic";
 
 export default function Home() {
@@ -33,6 +34,7 @@ export default function Home() {
     devGrantPoints,
   } = useGame();
 
+  const { muted, toggleMuted } = useSound();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   // localStorage を読むまでは何も出さない（サーバー描画との食い違いを避ける）
@@ -100,6 +102,8 @@ export default function Home() {
           totalRate={totalRate}
           groupMultiplier={groupMultiplier}
           clickPower={clickPower}
+          muted={muted}
+          onToggleMuted={toggleMuted}
           onReset={reset}
           onClose={() => setSettingsOpen(false)}
           onDevGrantAll={devGrantAll}

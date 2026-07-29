@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
+import { Volume2, VolumeX, X } from "lucide-react";
 import {
   formatDuration,
   formatMultiplier,
@@ -21,6 +21,8 @@ type Props = {
   totalRate: number;
   groupMultiplier: number;
   clickPower: number;
+  muted: boolean;
+  onToggleMuted: () => void;
   onReset: () => void;
   onClose: () => void;
   onDevGrantAll: () => void;
@@ -33,6 +35,8 @@ export default function SettingsModal({
   totalRate,
   groupMultiplier,
   clickPower,
+  muted,
+  onToggleMuted,
   onReset,
   onClose,
   onDevGrantAll,
@@ -80,6 +84,23 @@ export default function SettingsModal({
           <Stat label="竣工回数" value={`${state.completions} 回`} />
         </dl>
 
+        <button
+          type="button"
+          onClick={onToggleMuted}
+          aria-pressed={!muted}
+          className="border-line hover:bg-canvas mt-5 flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm transition-colors"
+        >
+          <span className="text-ink flex items-center gap-2">
+            {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+            効果音
+          </span>
+          <span
+            className={`text-xs font-bold ${muted ? "text-ink-mute" : "text-sage-ink"}`}
+          >
+            {muted ? "オフ" : "オン"}
+          </span>
+        </button>
+
         <div className="bg-canvas text-ink-soft mt-5 space-y-2 rounded-lg p-3 text-xs leading-relaxed">
           <p>
             同じカテゴリを増やすとそのカテゴリの生産量が上がり、扱うカテゴリの種類が
@@ -119,7 +140,7 @@ export default function SettingsModal({
             </div>
             <p className="text-ink-mute mt-2 text-[11px] leading-relaxed">
               「全事業 +1」はコストと解放条件を無視して全21事業を1件ずつ増やします。
-              押した回数ぶん積めるので、倍率のしきい値やスカイラインの確認に使えます。
+              押した回数ぶん積めるので、倍率のしきい値やマップの確認に使えます。
             </p>
           </div>
         )}

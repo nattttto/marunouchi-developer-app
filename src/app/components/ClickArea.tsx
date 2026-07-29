@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { MAP_STAGES } from "../lib/assets";
 import { formatNumber } from "../lib/gameLogic";
 import { resolveStageIndex } from "../lib/mapScene";
+import { playArrival, playCompletion, playTap } from "../lib/sound";
 import PixelMap from "./PixelMap";
 
 type Props = {
@@ -72,6 +73,7 @@ export default function ClickArea({
     // 1マスの大きさは (半径×2+2) に反比例する。その比がそのまま引きの量になる
     const span = (i: number) => MAP_STAGES[i].gridRadius * 2 + 2;
     setArrival({ index: stageIndex, zoomFrom: span(stageIndex) / span(from) });
+    playArrival();
 
     const timer = window.setTimeout(() => setArrival(null), TELOP_MS);
     return () => window.clearTimeout(timer);
@@ -97,6 +99,9 @@ export default function ClickArea({
 
       // props はクリック前の状態なので、このクリックで竣工するかを先に判定できる
       const completing = groundworkClicks + 1 >= groundworkGoal;
+
+      if (completing) playCompletion();
+      else playTap((groundworkClicks + 1) / groundworkGoal);
 
       const id = nextIdRef.current++;
       setFloaters((prev) => [
