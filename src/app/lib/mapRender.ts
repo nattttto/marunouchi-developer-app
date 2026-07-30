@@ -36,6 +36,8 @@ export type MapPalette = {
   park: string;
   /** 既存の建物（東京駅） */
   landmark: string;
+  /** 圏外の陸（まだ手が届かない隣の地方） */
+  outland: string;
   /** 海岸線。街に覆われても地形の形が読めるようにするための線 */
   coast: string;
 };
@@ -50,6 +52,7 @@ const VAR_NAMES: Record<keyof MapPalette, string> = {
   water: "--color-water",
   park: "--color-park",
   landmark: "--color-landmark",
+  outland: "--color-outland",
   coast: "--color-coast",
 };
 
@@ -183,6 +186,14 @@ function drawTexture(
     // 波。横一本だけ入れて水面と分かるようにする
     if ((hash >> 1) % 3 !== 0) return;
     px(ctx, x + 1, y + Math.floor(h / 2), Math.max(2, w - 2), 1, shade(color, 1.07));
+    return;
+  }
+
+  if (char === "o") {
+    // 圏外の陸。まだ手つかずの土地として、粗い点を散らす
+    const dark = shade(color, 0.94);
+    px(ctx, x + 1 + (hash & 3), y + 1 + ((hash >> 2) & 3), 1, 1, dark);
+    px(ctx, x + Math.floor(w / 2), y + h - 2 - (hash & 1), 1, 1, dark);
   }
 }
 
@@ -191,12 +202,13 @@ function charColor(char: string, palette: MapPalette): string | null {
   if (char === "~") return palette.water;
   if (char === "*") return palette.park;
   if (char === "B") return palette.landmark;
+  if (char === "o") return palette.outland;
   return null;
 }
 
-/** 陸として扱う文字。緑地も駅も「海ではない」ので陸に含める */
+/** 陸として扱う文字。緑地も駅も圏外の地方も「海ではない」ので陸に含める */
 function isLandChar(char: string): boolean {
-  return char === "#" || char === "*" || char === "B";
+  return char === "#" || char === "*" || char === "B" || char === "o";
 }
 
 /**
@@ -315,42 +327,81 @@ function drawShadow(
     ctx,
     tile.x + tile.shadow,
     tile.y + tile.shadow,
-    tile.size,
-    tile.size,
+    tile.w,
+    tile.h,
     palette.shadow
   );
 }
 
+/**
+ * 区画1つ。**shape ごとに屋上の描き方を変える。**
+ * 上から見て何を建てたのか分かるのは、敷地の形と屋上の模様だけなので。
+ */
 function drawTile(
   ctx: CanvasRenderingContext2D,
   tile: MapTile,
   palette: MapPalette
 ): void {
   const color = tile.color ?? palette.plot;
-  const { x, y, size } = tile;
+  const { x, y, w, h } = tile;
 
-  px(ctx, x, y, size, size, color);
-
-  if (size < 3) return;
+  px(ctx, x, y, w, h, color);
+  if (w < 3 || h < 3) return;
 
   // 北と西の縁が明るく、東の縁が暗い。この2本で屋上の面が起きて見える
-  px(ctx, x, y, size, 1, shade(color, 1.12));
-  px(ctx, x + size - 1, y, 1, size, shade(color, 0.86));
+  px(ctx, x, y, w, 1, shade(color, 1.14));
+  px(ctx, x + w - 1, y, 1, h, shade(color, 0.84));
 
-  if (tile.runway) {
-    px(ctx, x + 1, y + Math.floor(size / 2), size - 2, 1, shade(color, 1.25));
+  drawRoof(ctx, tile, color);
+}
+
+function drawRoof(
+  ctx: CanvasRenderingContext2D,
+  tile: MapTile,
+  color: string
+): void {
+  const { x, y, w, h, shape, stage } = tile;
+  const dark = shade(color, 0.78);
+  const light = shade(color, 1.28);
+
+  if (shape === "airport") {
+    // 滑走路2本と、端のターミナル。空港は敷地の広さだけでも分かるが、
+    // 滑走路が入ると一目で空港になる
+    const runwayY = y + Math.round(h * 0.38);
+    px(ctx, x + 1, runwayY, w - 2, 1, light);
+    if (h >= 6) {
+      px(ctx, x + 1, y + Math.round(h * 0.72), Math.round(w * 0.6), 1, light);
+    }
+    if (w >= 8) px(ctx, x + w - 4, y + h - 3, 3, 2, dark);
     return;
   }
 
-  if (size < 5) return;
+  if (shape === "lowrise") {
+    // 屋根の折板。横に長い建物は縞で「平屋」に見える
+    for (let line = y + 2; line < y + h - 1; line += 2) {
+      px(ctx, x + 1, line, w - 2, 1, dark);
+    }
+    return;
+  }
 
-  // 屋上設備。保有数が増えたことが上から見ても分かるようにする
-  if (tile.stage >= 2) {
-    px(ctx, x + 1, y + 1, 2, 2, shade(color, 0.8));
+  if (shape === "tower") {
+    // 高層は屋上が狭い。中心に設備をひとつ置いて、段階で増やす
+    const cx = x + Math.floor(w / 2);
+    const cy = y + Math.floor(h / 2);
+    px(ctx, cx - 1, cy - 1, 2, 2, light);
+    if (stage >= 2) px(ctx, x + 1, y + 1, 1, 1, dark);
+    if (stage >= 3) px(ctx, x + w - 2, y + h - 2, 1, 1, dark);
+    return;
   }
-  if (tile.stage >= 3) {
-    px(ctx, x + size - 4, y + size - 3, 2, 2, shade(color, 0.74));
+
+  // midrise。中庭を抜いて、住棟・ホテル棟として読ませる
+  if (w >= 6 && h >= 6) {
+    px(ctx, x + 2, y + 2, w - 4, h - 4, dark);
+    px(ctx, x + 3, y + 3, w - 6, h - 6, shade(color, 1.05));
+  } else {
+    px(ctx, x + 1, y + Math.floor(h / 2), w - 2, 1, dark);
   }
+  if (stage >= 3 && w >= 8) px(ctx, x + w - 3, y + 1, 2, 2, dark);
 }
 
 /** クレーンのブームが伸びる向き（右→下→左→上） */
@@ -418,13 +469,13 @@ function drawPending(
  */
 export function drawPlacementFlash(
   ctx: CanvasRenderingContext2D,
-  plot: { x: number; y: number; size: number },
+  plot: { x: number; y: number; w: number; h: number },
   t: number,
   strong: boolean,
   palette: MapPalette
 ): void {
   // 後半の段階では区画が数px以下になる。波まで小さくすると見えないので下限を置く
-  const base = Math.max(plot.size, 6);
+  const base = Math.max(plot.w, plot.h, 6);
   const spread = base * (strong ? 2 : 1.2) * t;
   const alpha = (strong ? 1 : 0.7) * (1 - t);
   if (alpha <= 0) return;
@@ -434,16 +485,17 @@ export function drawPlacementFlash(
 
   // 置かれた区画そのものを一瞬光らせる。
   // 1マスが数pxしかない後半でも、波だけでは何が増えたのか分からないため
-  px(ctx, plot.x, plot.y, plot.size, plot.size, shade(palette.accent, 1.25));
+  px(ctx, plot.x, plot.y, plot.w, plot.h, shade(palette.accent, 1.25));
 
   const x = plot.x - spread;
   const y = plot.y - spread;
-  const side = plot.size + spread * 2;
+  const w = plot.w + spread * 2;
+  const h = plot.h + spread * 2;
   // 塗り潰さず外周1pxだけ。中の区画を隠さずに広がりだけを見せる
-  px(ctx, x, y, side, 1, palette.accent);
-  px(ctx, x, y + side - 1, side, 1, palette.accent);
-  px(ctx, x, y, 1, side, palette.accent);
-  px(ctx, x + side - 1, y, 1, side, palette.accent);
+  px(ctx, x, y, w, 1, palette.accent);
+  px(ctx, x, y + h - 1, w, 1, palette.accent);
+  px(ctx, x, y, 1, h, palette.accent);
+  px(ctx, x + w - 1, y, 1, h, palette.accent);
 
   ctx.restore();
 }

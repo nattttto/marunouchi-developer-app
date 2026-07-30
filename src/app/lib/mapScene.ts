@@ -2,6 +2,7 @@ import { ASSET_MAP, MAP_STAGES } from "./assets";
 import { getGrowthStage } from "./gameLogic";
 import {
   BUILDABLE,
+  countBuildable,
   getTerrainLayout,
   terrainAt,
   terrainToCanvas,
@@ -26,12 +27,18 @@ import type { AssetShape, MapStage } from "./types";
 /** 区画1つぶんの余白の割合（1マスに対して、建物が占めない外周） */
 const PLOT_INSET = 0.22;
 
-/** shape ごとの敷地の広さ。真上から見たときの占有率 */
-const SHAPE_FOOTPRINT: Record<AssetShape, number> = {
-  tower: 0.72,
-  midrise: 0.84,
-  lowrise: 1,
-  airport: 1,
+/**
+ * shape ごとの敷地の形。1マスに対する 幅 / 奥行き の比。
+ *
+ * **正方形で揃えない。** 空港と超高層ビルが同じ大きさの四角だと、
+ * 何を建てたのか上から見て分からない。実際の敷地の使い方に寄せて、
+ * 高層は小さく（その代わり影が長い）、平屋は広く浅く、空港は一番大きく取る。
+ */
+const SHAPE_FOOTPRINT: Record<AssetShape, { w: number; h: number }> = {
+  tower: { w: 0.62, h: 0.62 },
+  midrise: { w: 0.85, h: 0.85 },
+  lowrise: { w: 1.05, h: 0.6 },
+  airport: { w: 1.5, h: 0.95 },
 };
 
 /** 成長段階ごとに敷地へ足す割合。保有数が増えると区画そのものが太る */
@@ -52,16 +59,17 @@ export type MapTile = {
   /** 建物の左上（論理px） */
   x: number;
   y: number;
-  /** 建物の一辺（論理px） */
-  size: number;
+  /** 建物の幅と奥行き（論理px） */
+  w: number;
+  h: number;
   /** 事業色。竣工区画は null（描画側でパレットの色を使う） */
   color: string | null;
   /** 影の長さ（論理px）。見下ろしでは影の長さが高さを表す */
   shadow: number;
   /** 保有数から決まる成長段階 */
   stage: 1 | 2 | 3;
-  /** 滑走路の帯を引くか（空港） */
-  runway: boolean;
+  /** 屋上の描き分けに使う。竣工区画は null */
+  shape: AssetShape | null;
 };
 
 /** 次に建つ区画（着工中）。タップのたびにここが育つ */
@@ -139,9 +147,41 @@ export function ringRadiusFor(count: number): number {
  * 区画数からズーム段階を決める。
  * 着工中の区画も数に入れる（次の1つでリングが増えるなら、先に引いておく）。
  */
+/**
+ * その段階に置ける区画数の上限。
+ *
+ * **手で持たずに地形から計算する。** 区画は陸にしか建たないので、
+ * 上限は「陸のマス数」で決まる。手で数値を置いていたときは地形を描き替える
+ * たびにずれ、上限のほうが大きいと**溢れた区画が画面外へ消えていた**
+ * （＝「間引かない」が破れていた。実際に踏んだ）。
+ *
+ * 1文字が何マスぶんかは `(半径×2+2) / ビットマップの長辺` で決まり、
+ * キャンバスの大きさに依存しない。だから静的に出せる。
+ */
+export function getStageCapacity(index: number): number {
+  const stage = MAP_STAGES[index];
+  const span = stage.gridRadius * 2 + 2;
+  const terrain = TERRAINS[stage.id];
+  if (!terrain) return span * span;
+
+  const chars = Math.max(terrain.rows[0].length, terrain.rows.length);
+  const cellsPerChar = span / chars;
+  return Math.floor(countBuildable(terrain) * cellsPerChar * cellsPerChar);
+}
+
+/** 最後の段階だけは上限なし。世界を埋めきったら海へ広がっていく */
+const CAPACITIES = MAP_STAGES.map((_, i) =>
+  i === MAP_STAGES.length - 1 ? Number.POSITIVE_INFINITY : getStageCapacity(i)
+);
+
 export function resolveStageIndex(count: number): number {
-  const index = MAP_STAGES.findIndex((s) => count <= s.capacity);
+  const index = CAPACITIES.findIndex((capacity) => count <= capacity);
   return index === -1 ? MAP_STAGES.length - 1 : index;
+}
+
+/** 段階ごとの収容数。数値バランスを見るための一覧 */
+export function getStageCapacities(): number[] {
+  return CAPACITIES;
 }
 
 /**
@@ -174,16 +214,21 @@ function plotOf(id: string, owned: Record<string, number>, cell: number) {
 
   if (!asset) {
     // 竣工区画。事業ではないので控えめな正方形にしておく
-    return { size: Math.max(1, inner * 0.7), shadow: 1, stage: 1 as const };
+    const size = Math.max(1, inner * 0.7);
+    return { w: size, h: size, shadow: 1, stage: 1 as const };
   }
 
   const stage = getGrowthStage(owned[asset.id] ?? 0);
-  const size = inner * SHAPE_FOOTPRINT[asset.shape] * STAGE_GROWTH[stage];
+  const footprint = SHAPE_FOOTPRINT[asset.shape];
+  // 事業ごとの `widthRatio` も少しだけ効かせて、同じ shape の中でも大きさに幅を出す
+  const variety = 0.88 + 0.09 * asset.widthRatio;
+  const grow = STAGE_GROWTH[stage] * variety;
 
   return {
-    size: Math.max(1, Math.min(cell, size)),
+    w: Math.max(1, inner * footprint.w * grow),
+    h: Math.max(1, inner * footprint.h * grow),
     // 高い事業ほど影が長い。見下ろしで高さを伝える唯一の手がかり
-    shadow: Math.max(1, Math.round(1 + asset.heightRatio * (cell >= 6 ? 2 : 1))),
+    shadow: Math.max(1, Math.round(1 + asset.heightRatio * (cell >= 6 ? 3 : 1))),
     stage,
   };
 }
@@ -217,36 +262,43 @@ export function buildMapScene(
   /**
    * 渦巻きを進めながら、置ける（＝陸の）マスを1つ返す。
    * 陸を探して延々と回り続けないよう、走査の上限を切ってある。
-   * 上限に達したら海の上でも置く（＝その段階を埋め尽くした状態）。
+   *
+   * 上限に達したら**走査を始めたマスにそのまま置く**（陸が尽きた状態）。
+   * 上限の先へ進めてしまうと、遥か外側の画面外に置かれて区画が消えて見える。
+   * 重なっても見えているほうがまし。
    */
   let cursor = 0;
-  const limit = (stage.gridRadius * 2 + 3) ** 2 * 2;
+  const limit = (stage.gridRadius * 2 + 3) ** 2;
+  const at = (index: number) => {
+    const { gx, gy } = spiralAt(index);
+    return { x: originX + gx * cell, y: originY + gy * cell };
+  };
   const nextCell = () => {
+    const start = cursor;
     for (let scanned = 0; scanned < limit; scanned++) {
-      const at = spiralAt(cursor++);
-      const x = originX + at.gx * cell;
-      const y = originY + at.gy * cell;
-      if (isBuildable(terrain, layout, x, y)) return { x, y };
+      const spot = at(cursor++);
+      if (isBuildable(terrain, layout, spot.x, spot.y)) return spot;
     }
-    const at = spiralAt(cursor++);
-    return { x: originX + at.gx * cell, y: originY + at.gy * cell };
+    cursor = start + 1;
+    return at(start);
   };
 
   const tiles: MapTile[] = [];
   for (const id of placements) {
     const { x, y } = nextCell();
-    const { size, shadow, stage: growth } = plotOf(id, owned, cell);
+    const { w, h, shadow, stage: growth } = plotOf(id, owned, cell);
     const asset = ASSET_MAP[id];
 
     tiles.push({
       id,
-      x: x - size / 2,
-      y: y - size / 2,
-      size,
+      x: x - w / 2,
+      y: y - h / 2,
+      w,
+      h,
       color: asset?.color ?? null,
       shadow,
       stage: growth,
-      runway: asset?.shape === "airport" && size >= 5,
+      shape: asset?.shape ?? null,
     });
   }
 
