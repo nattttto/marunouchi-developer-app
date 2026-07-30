@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import BuyQuantityToggle from "./components/BuyQuantityToggle";
 import CategoryStrip from "./components/CategoryStrip";
 import ClickArea from "./components/ClickArea";
 import Hud from "./components/Hud";
@@ -16,6 +17,8 @@ export default function Home() {
     state,
     loaded,
     offline,
+    buyQuantity,
+    setBuyQuantity,
     totalRate,
     costs,
     unlocked,
@@ -78,6 +81,9 @@ export default function Home() {
           onClick={click}
         />
 
+        {/* 着工エリアの左上。エリアの子にすると button が入れ子になるので兄弟で重ねる */}
+        <BuyQuantityToggle value={buyQuantity} onChange={setBuyQuantity} />
+
         {developmentRate >= 1 && (
           <p className="text-brick-ink pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-lg font-bold tracking-wider drop-shadow-[0_1px_4px_rgba(255,255,255,0.95)]">
             グループ展開率 100%
@@ -91,6 +97,7 @@ export default function Home() {
         costs={costs}
         unlocked={unlocked}
         effectiveProduction={effectiveProduction}
+        quantity={buyQuantity}
         onBuy={buy}
       />
 

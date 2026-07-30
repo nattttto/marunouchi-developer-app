@@ -13,6 +13,8 @@ type Props = {
   unlocked: Record<string, boolean>;
   /** 倍率込みの1件あたり生産量。ショップの表示はこの実効値に揃える */
   effectiveProduction: Record<string, number>;
+  /** まとめ買いの単位。`costs` はこの件数ぶんの合計になっている */
+  quantity: number;
   onBuy: (assetId: string) => void;
 };
 
@@ -23,6 +25,7 @@ export default function Shop({
   costs,
   unlocked,
   effectiveProduction,
+  quantity,
   onBuy,
 }: Props) {
   return (
@@ -37,6 +40,7 @@ export default function Shop({
             unlocked={unlocked[asset.id] ?? false}
             production={effectiveProduction[asset.id] ?? asset.baseProduction}
             points={points}
+            quantity={quantity}
             onBuy={onBuy}
           />
         ))}
@@ -52,6 +56,7 @@ type RowProps = {
   unlocked: boolean;
   production: number;
   points: number;
+  quantity: number;
   onBuy: (assetId: string) => void;
 };
 
@@ -62,6 +67,7 @@ function ShopRow({
   unlocked,
   production,
   points,
+  quantity,
   onBuy,
 }: RowProps) {
   const affordable = unlocked && points >= cost;
@@ -139,7 +145,14 @@ function ShopRow({
         </span>
 
         <span className="shrink-0 text-right">
-          <span className="text-ink-mute text-[10px] tracking-widest">取得費</span>
+          <span className="text-ink-mute text-[10px] tracking-widest">
+            取得費
+            {quantity > 1 && (
+              <span className="text-brick-ink tabular ml-1 font-bold">
+                ×{quantity}
+              </span>
+            )}
+          </span>
           <span
             className={[
               "tabular block text-sm font-bold",

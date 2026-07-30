@@ -172,7 +172,8 @@ export default function ClickArea({
         上部から暗いスクリムをかけて文字のコントラストを確保する。
       */}
       <div className="from-canvas via-canvas/80 pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b to-transparent px-4 pt-3 pb-8">
-        <p className="tabular text-ink text-center text-xs">
+        {/* 左上のまとめ買いトグルとぶつかるので、中央寄せにはしない */}
+        <p className="tabular text-ink pr-1 text-right text-xs">
           1タップ{" "}
           <span className="text-brick-ink font-bold">
             +{formatNumber(clickPower)}
