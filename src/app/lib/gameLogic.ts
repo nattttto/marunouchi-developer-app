@@ -26,6 +26,27 @@ export function getCost(asset: Asset, owned: number): number {
 }
 
 /**
+ * `count` 件まとめて取得するときの合計コスト。
+ *
+ * コストは1件ごとに `costMultiplier` 倍になる等比数列なので、
+ * その和を閉じた式で出す（1件ずつ 100 回足すのは、秒間の再計算で無駄が大きい）。
+ *
+ * 1件ずつ買ったときの合計とは、各件の切り上げ分だけ最大で `count` PT ずれる。
+ * 指数的に伸びる金額に対して無視できる差なので、合計を1回切り上げる形にしてある。
+ */
+export function getBulkCost(
+  asset: Asset,
+  owned: number,
+  count: number
+): number {
+  if (count <= 1) return getCost(asset, owned);
+
+  const m = asset.costMultiplier;
+  const first = asset.baseCost * Math.pow(m, owned);
+  return Math.ceil((first * (Math.pow(m, count) - 1)) / (m - 1));
+}
+
+/**
  * その事業がショップで解放されているか。
  *
  * 既に1件以上保有しているものは常に解放済みとして扱う。

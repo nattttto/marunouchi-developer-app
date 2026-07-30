@@ -1,6 +1,11 @@
 import { MAP_ROAD_EVERY } from "./assets";
 import type { MapScene, MapTile } from "./mapScene";
-import { getTerrainLayout, TERRAINS } from "./mapTerrain";
+import {
+  charAt,
+  getTerrainLayout,
+  terrainDrawRange,
+  TERRAINS,
+} from "./mapTerrain";
 
 /**
  * 見下ろしマップをドット絵として canvas に描く。
@@ -29,6 +34,12 @@ export type MapPalette = {
   water: string;
   /** 緑地（皇居） */
   park: string;
+  /** 既存の建物（東京駅） */
+  landmark: string;
+  /** 圏外の陸（まだ手が届かない隣の地方） */
+  outland: string;
+  /** 海岸線。街に覆われても地形の形が読めるようにするための線 */
+  coast: string;
 };
 
 const VAR_NAMES: Record<keyof MapPalette, string> = {
@@ -40,6 +51,9 @@ const VAR_NAMES: Record<keyof MapPalette, string> = {
   accent: "--color-brick",
   water: "--color-water",
   park: "--color-park",
+  landmark: "--color-landmark",
+  outland: "--color-outland",
+  coast: "--color-coast",
 };
 
 const FALLBACK = "#cfc3ae";
@@ -110,32 +124,138 @@ function px(
 function drawTerrain(
   ctx: CanvasRenderingContext2D,
   scene: MapScene,
+  palette: MapPalette,
+  /**
+   * 陸（`#`）を塗り直すか。
+   * 陸の地形では地面と道路を先に敷いてあるので、塗り直すと道路が消える。
+   * 逆に海の地形では、下地が海なので陸を塗らないと何も出ない。
+   */
+  fillGroundChar: boolean
+): void {
+  const terrain = TERRAINS[scene.stage.id];
+  if (!terrain) return;
+
+  const layout = getTerrainLayout(terrain, scene.width, scene.height);
+  const { scale, offsetX, offsetY } = layout;
+  const range = terrainDrawRange(terrain, layout, scene.width, scene.height);
+
+  for (let r = range.rowFrom; r < range.rowTo; r++) {
+    const top = Math.round(offsetY + r * scale);
+    const bottom = Math.round(offsetY + (r + 1) * scale);
+    for (let c = range.colFrom; c < range.colTo; c++) {
+      const char = charAt(terrain, c, r);
+      if (char === "#" && !fillGroundChar) continue;
+      const color = charColor(char, palette);
+      if (!color) continue;
+      const left = Math.round(offsetX + c * scale);
+      const right = Math.round(offsetX + (c + 1) * scale);
+      px(ctx, left, top, right - left, bottom - top, color);
+      drawTexture(ctx, char, color, left, top, right - left, bottom - top, c, r);
+    }
+  }
+}
+
+/**
+ * 緑地と水面の質感。
+ * 平らに塗ると地図というより色板に見えてしまうので、
+ * 位置から決まる（＝毎回同じ場所に出る）点を散らして面に表情をつける。
+ */
+function drawTexture(
+  ctx: CanvasRenderingContext2D,
+  char: string,
+  color: string,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  col: number,
+  row: number
+): void {
+  if (w < 3 || h < 3) return;
+  const hash = (col * 73856093) ^ (row * 19349663);
+
+  if (char === "*") {
+    // 木立。1マスに2つ、位置をずらして置く
+    const dark = shade(color, 0.86);
+    px(ctx, x + 1 + (hash & 1), y + 1, 2, 2, dark);
+    px(ctx, x + Math.floor(w / 2) + (hash & 1), y + h - 3, 2, 2, dark);
+    return;
+  }
+
+  if (char === "~") {
+    // 波。横一本だけ入れて水面と分かるようにする
+    if ((hash >> 1) % 3 !== 0) return;
+    px(ctx, x + 1, y + Math.floor(h / 2), Math.max(2, w - 2), 1, shade(color, 1.07));
+    return;
+  }
+
+  if (char === "o") {
+    // 圏外の陸。まだ手つかずの土地として、粗い点を散らす
+    const dark = shade(color, 0.94);
+    px(ctx, x + 1 + (hash & 3), y + 1 + ((hash >> 2) & 3), 1, 1, dark);
+    px(ctx, x + Math.floor(w / 2), y + h - 2 - (hash & 1), 1, 1, dark);
+  }
+}
+
+function charColor(char: string, palette: MapPalette): string | null {
+  if (char === "#") return palette.ground;
+  if (char === "~") return palette.water;
+  if (char === "*") return palette.park;
+  if (char === "B") return palette.landmark;
+  if (char === "o") return palette.outland;
+  return null;
+}
+
+/** 陸として扱う文字。緑地も駅も圏外の地方も「海ではない」ので陸に含める */
+function isLandChar(char: string): boolean {
+  return char === "#" || char === "*" || char === "B" || char === "o";
+}
+
+/**
+ * 海岸線と、緑地・既存建物の輪郭。
+ *
+ * **これは区画より後に描く。** 街が地形を覆いきっても、
+ * 線が上に乗っていれば日本や湾の形が読める（覆い尽くす前提のゲームなので、
+ * 下に敷いた地形だけでは終盤に何も分からなくなる）。
+ */
+export function drawOutlines(
+  ctx: CanvasRenderingContext2D,
+  scene: MapScene,
   palette: MapPalette
 ): void {
   const terrain = TERRAINS[scene.stage.id];
   if (!terrain) return;
 
-  const { scale, offsetX, offsetY, cols, rows } = getTerrainLayout(
-    terrain,
-    scene.width,
-    scene.height
-  );
+  const layout = getTerrainLayout(terrain, scene.width, scene.height);
+  const { scale, offsetX, offsetY } = layout;
+  const range = terrainDrawRange(terrain, layout, scene.width, scene.height);
 
-  const colors: Record<string, string> = {
-    "#": palette.ground,
-    "~": palette.water,
-    "*": palette.park,
-  };
-
-  for (let r = 0; r < rows; r++) {
+  for (let r = range.rowFrom; r < range.rowTo; r++) {
     const top = Math.round(offsetY + r * scale);
     const bottom = Math.round(offsetY + (r + 1) * scale);
-    for (let c = 0; c < cols; c++) {
-      const color = colors[terrain.rows[r][c]];
-      if (!color) continue;
+
+    for (let c = range.colFrom; c < range.colTo; c++) {
+      const char = charAt(terrain, c, r);
+      if (!isLandChar(char)) continue;
+
       const left = Math.round(offsetX + c * scale);
       const right = Math.round(offsetX + (c + 1) * scale);
-      px(ctx, left, top, right - left, bottom - top, color);
+      const w = right - left;
+      const h = bottom - top;
+
+      // 海に面していれば海岸線、緑地や駅の際なら自身の濃い色で縁取る
+      const feature = char === "#" ? null : charColor(char, palette);
+      const edge = feature ? shade(feature, 0.78) : palette.coast;
+
+      const neighbor = (dc: number, dr: number) =>
+        charAt(terrain, c + dc, r + dr);
+      const differs = (dc: number, dr: number) =>
+        feature ? neighbor(dc, dr) !== char : !isLandChar(neighbor(dc, dr));
+
+      if (differs(0, -1)) px(ctx, left, top, w, 1, edge);
+      if (differs(0, 1)) px(ctx, left, bottom - 1, w, 1, edge);
+      if (differs(-1, 0)) px(ctx, left, top, 1, h, edge);
+      if (differs(1, 0)) px(ctx, right - 1, top, 1, h, edge);
     }
   }
 }
@@ -143,6 +263,10 @@ function drawTerrain(
 /**
  * 地面と道路。道路はマス目に合わせて等間隔に通す。
  * マス目そのものが見えると「区画に建てている」ことが伝わる。
+ *
+ * 順番は 地面 → 道路 → 地形（水・緑地・駅）。
+ * **道路を地形より先に敷く。** 後から引くと皇居や東京駅の上を横切ってしまう。
+ * 陸（`#`）は地面と同じ色なので、地形側では塗り直さない。
  */
 function drawGround(
   ctx: CanvasRenderingContext2D,
@@ -150,21 +274,22 @@ function drawGround(
   palette: MapPalette
 ): void {
   const terrain = TERRAINS[scene.stage.id];
+  const sea = terrain?.sea ?? false;
 
   // 海の上に描く段階（列島・世界地図）は、地面ではなく海で埋める
-  px(
-    ctx,
-    0,
-    0,
-    scene.width,
-    scene.height,
-    terrain?.sea ? palette.water : palette.ground
-  );
-  drawTerrain(ctx, scene, palette);
+  px(ctx, 0, 0, scene.width, scene.height, sea ? palette.water : palette.ground);
 
   // 道路は街として見えている段階だけ。列島や世界地図に街区の道路は引かない
-  if (terrain?.sea) return;
+  if (!sea) drawRoads(ctx, scene, palette);
 
+  drawTerrain(ctx, scene, palette, sea);
+}
+
+function drawRoads(
+  ctx: CanvasRenderingContext2D,
+  scene: MapScene,
+  palette: MapPalette
+): void {
   const step = scene.cell * MAP_ROAD_EVERY;
   // 1マスが小さいと道路だけで画面が埋まるので、その段階では引かない
   if (step < 6) return;
@@ -202,42 +327,81 @@ function drawShadow(
     ctx,
     tile.x + tile.shadow,
     tile.y + tile.shadow,
-    tile.size,
-    tile.size,
+    tile.w,
+    tile.h,
     palette.shadow
   );
 }
 
+/**
+ * 区画1つ。**shape ごとに屋上の描き方を変える。**
+ * 上から見て何を建てたのか分かるのは、敷地の形と屋上の模様だけなので。
+ */
 function drawTile(
   ctx: CanvasRenderingContext2D,
   tile: MapTile,
   palette: MapPalette
 ): void {
   const color = tile.color ?? palette.plot;
-  const { x, y, size } = tile;
+  const { x, y, w, h } = tile;
 
-  px(ctx, x, y, size, size, color);
-
-  if (size < 3) return;
+  px(ctx, x, y, w, h, color);
+  if (w < 3 || h < 3) return;
 
   // 北と西の縁が明るく、東の縁が暗い。この2本で屋上の面が起きて見える
-  px(ctx, x, y, size, 1, shade(color, 1.12));
-  px(ctx, x + size - 1, y, 1, size, shade(color, 0.86));
+  px(ctx, x, y, w, 1, shade(color, 1.14));
+  px(ctx, x + w - 1, y, 1, h, shade(color, 0.84));
 
-  if (tile.runway) {
-    px(ctx, x + 1, y + Math.floor(size / 2), size - 2, 1, shade(color, 1.25));
+  drawRoof(ctx, tile, color);
+}
+
+function drawRoof(
+  ctx: CanvasRenderingContext2D,
+  tile: MapTile,
+  color: string
+): void {
+  const { x, y, w, h, shape, stage } = tile;
+  const dark = shade(color, 0.78);
+  const light = shade(color, 1.28);
+
+  if (shape === "airport") {
+    // 滑走路2本と、端のターミナル。空港は敷地の広さだけでも分かるが、
+    // 滑走路が入ると一目で空港になる
+    const runwayY = y + Math.round(h * 0.38);
+    px(ctx, x + 1, runwayY, w - 2, 1, light);
+    if (h >= 6) {
+      px(ctx, x + 1, y + Math.round(h * 0.72), Math.round(w * 0.6), 1, light);
+    }
+    if (w >= 8) px(ctx, x + w - 4, y + h - 3, 3, 2, dark);
     return;
   }
 
-  if (size < 5) return;
+  if (shape === "lowrise") {
+    // 屋根の折板。横に長い建物は縞で「平屋」に見える
+    for (let line = y + 2; line < y + h - 1; line += 2) {
+      px(ctx, x + 1, line, w - 2, 1, dark);
+    }
+    return;
+  }
 
-  // 屋上設備。保有数が増えたことが上から見ても分かるようにする
-  if (tile.stage >= 2) {
-    px(ctx, x + 1, y + 1, 2, 2, shade(color, 0.8));
+  if (shape === "tower") {
+    // 高層は屋上が狭い。中心に設備をひとつ置いて、段階で増やす
+    const cx = x + Math.floor(w / 2);
+    const cy = y + Math.floor(h / 2);
+    px(ctx, cx - 1, cy - 1, 2, 2, light);
+    if (stage >= 2) px(ctx, x + 1, y + 1, 1, 1, dark);
+    if (stage >= 3) px(ctx, x + w - 2, y + h - 2, 1, 1, dark);
+    return;
   }
-  if (tile.stage >= 3) {
-    px(ctx, x + size - 4, y + size - 3, 2, 2, shade(color, 0.74));
+
+  // midrise。中庭を抜いて、住棟・ホテル棟として読ませる
+  if (w >= 6 && h >= 6) {
+    px(ctx, x + 2, y + 2, w - 4, h - 4, dark);
+    px(ctx, x + 3, y + 3, w - 6, h - 6, shade(color, 1.05));
+  } else {
+    px(ctx, x + 1, y + Math.floor(h / 2), w - 2, 1, dark);
   }
+  if (stage >= 3 && w >= 8) px(ctx, x + w - 3, y + 1, 2, 2, dark);
 }
 
 /** クレーンのブームが伸びる向き（右→下→左→上） */
@@ -305,13 +469,13 @@ function drawPending(
  */
 export function drawPlacementFlash(
   ctx: CanvasRenderingContext2D,
-  plot: { x: number; y: number; size: number },
+  plot: { x: number; y: number; w: number; h: number },
   t: number,
   strong: boolean,
   palette: MapPalette
 ): void {
   // 後半の段階では区画が数px以下になる。波まで小さくすると見えないので下限を置く
-  const base = Math.max(plot.size, 6);
+  const base = Math.max(plot.w, plot.h, 6);
   const spread = base * (strong ? 2 : 1.2) * t;
   const alpha = (strong ? 1 : 0.7) * (1 - t);
   if (alpha <= 0) return;
@@ -321,16 +485,17 @@ export function drawPlacementFlash(
 
   // 置かれた区画そのものを一瞬光らせる。
   // 1マスが数pxしかない後半でも、波だけでは何が増えたのか分からないため
-  px(ctx, plot.x, plot.y, plot.size, plot.size, shade(palette.accent, 1.25));
+  px(ctx, plot.x, plot.y, plot.w, plot.h, shade(palette.accent, 1.25));
 
   const x = plot.x - spread;
   const y = plot.y - spread;
-  const side = plot.size + spread * 2;
+  const w = plot.w + spread * 2;
+  const h = plot.h + spread * 2;
   // 塗り潰さず外周1pxだけ。中の区画を隠さずに広がりだけを見せる
-  px(ctx, x, y, side, 1, palette.accent);
-  px(ctx, x, y + side - 1, side, 1, palette.accent);
-  px(ctx, x, y, 1, side, palette.accent);
-  px(ctx, x + side - 1, y, 1, side, palette.accent);
+  px(ctx, x, y, w, 1, palette.accent);
+  px(ctx, x, y + h - 1, w, 1, palette.accent);
+  px(ctx, x, y, 1, h, palette.accent);
+  px(ctx, x + w - 1, y, 1, h, palette.accent);
 
   ctx.restore();
 }
@@ -345,9 +510,16 @@ export function drawMap(
   ctx.imageSmoothingEnabled = false;
 
   drawGround(ctx, scene, palette);
+
   // 影 → 本体 の2パス。1パスで描くと、渦巻きの順序の都合で
-  // 後から置いた区画の影が隣の屋上に乗ってしまう
-  for (const tile of scene.tiles) drawShadow(ctx, tile, palette);
+  // 後から置いた区画の影が隣の屋上に乗ってしまう。
+  // 1マスが小さい段階では影を省く。区画が数pxしかないところに影を足すと
+  // ノイズが倍になって、街も地形も読めなくなる
+  if (scene.cell >= 3) {
+    for (const tile of scene.tiles) drawShadow(ctx, tile, palette);
+  }
   for (const tile of scene.tiles) drawTile(ctx, tile, palette);
+
+  drawOutlines(ctx, scene, palette);
   drawPending(ctx, scene, palette);
 }

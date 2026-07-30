@@ -11,11 +11,11 @@ import {
 import { ASSETS, ASSET_MAP, COMPLETION_TILE_ID } from "../lib/assets";
 import { IS_DEV } from "../lib/env";
 import {
+  getBulkCost,
   getCategoryCounts,
   getCategoryMultipliers,
   getClickPower,
   getCompletionBonus,
-  getCost,
   getEffectiveProduction,
   getGroundworkGoal,
   getGroupSynergyMultiplier,
@@ -38,10 +38,15 @@ const TICK_MS = 100;
 /** 自動セーブの間隔(ms) */
 const AUTOSAVE_MS = 5_000;
 
+/** まとめ買いの単位。建設画面のトグルで切り替える */
+export const BUY_QUANTITIES = [1, 10, 100] as const;
+
+export type BuyQuantity = (typeof BUY_QUANTITIES)[number];
+
 type Action =
   | { type: "load"; state: GameState }
   | { type: "click" }
-  | { type: "buy"; assetId: string }
+  | { type: "buy"; assetId: string; count: number }
   | { type: "tick"; seconds: number }
   | { type: "grant"; points: number }
   | { type: "devGrantAll" }
@@ -101,21 +106,29 @@ function reducer(state: GameState, action: Action): GameState {
         totalEarned: state.totalEarned + action.points,
       };
 
+    /**
+     * まとめ買い。**端数では買わない。** 指定した件数ぶんの合計が払えなければ何もしない。
+     * 買える範囲で買うと、表示しているコストと実際の請求額が食い違って分かりにくい。
+     */
     case "buy": {
       const asset = ASSET_MAP[action.assetId];
       if (!asset) return state;
       if (!isUnlocked(asset, state.owned)) return state;
 
-      const count = state.owned[asset.id] ?? 0;
-      const cost = getCost(asset, count);
+      const count = Math.max(1, Math.floor(action.count));
+      const owned = state.owned[asset.id] ?? 0;
+      const cost = getBulkCost(asset, owned, count);
       if (state.points < cost) return state;
 
       return {
         ...state,
         points: state.points - cost,
-        owned: { ...state.owned, [asset.id]: count + 1 },
+        owned: { ...state.owned, [asset.id]: owned + count },
         // 末尾に足すだけ。既に置いた区画は動かさない（並べ替えない）
-        placements: [...state.placements, asset.id],
+        placements: [
+          ...state.placements,
+          ...(Array(count).fill(asset.id) as string[]),
+        ],
       };
     }
 
@@ -146,6 +159,11 @@ export function useGame() {
   /** localStorage の読み込みが済むまで true にならない（SSR とのズレを防ぐ） */
   const [loaded, setLoaded] = useState(false);
   const [offline, setOffline] = useState<OfflineEarnings | null>(null);
+  /**
+   * まとめ買いの単位。セーブしない（端末をまたいで引き継ぐ意味がなく、
+   * 開き直したときに 100 のままだと事故になりやすい）。
+   */
+  const [buyQuantity, setBuyQuantity] = useState<BuyQuantity>(1);
 
   // 保存用に最新の state を保持しておく（interval のクロージャ対策）
   const stateRef = useRef(state);
@@ -215,7 +233,8 @@ export function useGame() {
     const effectiveProduction: Record<string, number> = {};
 
     for (const asset of ASSETS) {
-      costs[asset.id] = getCost(asset, owned[asset.id] ?? 0);
+      // コストはまとめ買いの単位ぶんの合計。ショップの表示と請求額を揃える
+      costs[asset.id] = getBulkCost(asset, owned[asset.id] ?? 0, buyQuantity);
       unlocked[asset.id] = isUnlocked(asset, owned);
       effectiveProduction[asset.id] = getEffectiveProduction(
         asset,
@@ -239,13 +258,13 @@ export function useGame() {
       groundworkGoal,
       completionBonus: getCompletionBonus(totalRate, groundworkGoal),
     };
-  }, [state]);
+  }, [state, buyQuantity]);
 
   const click = useCallback(() => dispatch({ type: "click" }), []);
 
   const buy = useCallback(
-    (assetId: string) => dispatch({ type: "buy", assetId }),
-    []
+    (assetId: string) => dispatch({ type: "buy", assetId, count: buyQuantity }),
+    [buyQuantity]
   );
 
   const reset = useCallback(() => {
@@ -271,6 +290,8 @@ export function useGame() {
     state,
     loaded,
     offline,
+    buyQuantity,
+    setBuyQuantity,
     ...derived,
     click,
     buy,
