@@ -1,8 +1,10 @@
 import { ASSET_MAP, MAP_STAGES } from "./assets";
 import { getGrowthStage } from "./gameLogic";
 import {
+  BUILDABLE,
   getTerrainLayout,
   terrainAt,
+  terrainToCanvas,
   TERRAINS,
   type Terrain,
   type TerrainLayout,
@@ -79,6 +81,16 @@ export type PendingPlot = {
   craneFacing: 0 | 1 | 2 | 3;
 };
 
+/**
+ * 地形に添える地名の、キャンバス上の位置。
+ * **文字は canvas ではなく DOM で描く**（ドット絵の解像度では潰れて読めない）。
+ */
+export type MapLabel = {
+  text: string;
+  x: number;
+  y: number;
+};
+
 export type MapScene = {
   width: number;
   height: number;
@@ -91,6 +103,7 @@ export type MapScene = {
   stageIndex: number;
   tiles: MapTile[];
   pending: PendingPlot;
+  labels: MapLabel[];
 };
 
 /**
@@ -145,13 +158,19 @@ function isBuildable(
   y: number
 ): boolean {
   if (!terrain || !layout) return true;
-  return terrainAt(terrain, layout, x, y) === "#";
+  return terrainAt(terrain, layout, x, y) === BUILDABLE;
 }
 
 /** 建物1つぶんの大きさと影の長さを、事業と保有数から決める */
 function plotOf(id: string, owned: Record<string, number>, cell: number) {
   const asset = ASSET_MAP[id];
-  const inner = cell * (1 - PLOT_INSET);
+  /*
+    1マスが小さい段階では余白を取らない。
+    数pxのマスから余白と敷地の差を引くと1px以下の点になり、
+    事業の色が地面に負けて「街が広がっている」ことが読めなくなる。
+    詰めて塗れば色の集まりが市街地として見える。
+  */
+  const inner = cell >= 4 ? cell * (1 - PLOT_INSET) : cell;
 
   if (!asset) {
     // 竣工区画。事業ではないので控えめな正方形にしておく
@@ -243,6 +262,13 @@ export function buildMapScene(
     stage,
     stageIndex,
     tiles,
+    labels:
+      terrain && layout
+        ? terrain.labels.map((label) => ({
+            text: label.text,
+            ...terrainToCanvas(layout, label.col, label.row),
+          }))
+        : [],
     pending: {
       x: next.x - pendingSize / 2,
       y: next.y - pendingSize / 2,

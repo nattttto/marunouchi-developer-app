@@ -25,6 +25,10 @@
   /* 海・湾と、皇居などの緑地 */
   --color-water: #b9cad2;
   --color-park: #9fb59a;
+  /* 既存の建物（東京駅）。赤煉瓦に寄せてある */
+  --color-landmark: #b07a63;
+  /* 海岸線。街に覆われても地形の形が読めるよう、区画の上に引く線 */
+  --color-coast: #7e8f97;
 
   --color-line: #e5ded2;
   --color-line-strong: #d6cbb9;

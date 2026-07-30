@@ -150,6 +150,17 @@ export default function ClickArea({
         />
       </div>
 
+      {/*
+        今どの縮尺を見ているのか。到達演出は一瞬で消えるので、
+        常時出しておかないと「何の地図なのか」が分からなくなる。
+      */}
+      <span className="border-line bg-canvas/80 text-ink pointer-events-none absolute bottom-2 left-2 rounded-lg border px-2 py-1 text-[11px] leading-tight">
+        <span className="font-bold">{MAP_STAGES[stageIndex].name}</span>
+        <span className="text-ink-mute ml-1.5">
+          1区画 = {MAP_STAGES[stageIndex].unitLabel}
+        </span>
+      </span>
+
       {arrival && (
         <span className="telop text-brick-ink bg-canvas/85 pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full px-5 py-2 text-lg font-bold whitespace-nowrap">
           {MAP_STAGES[arrival.index].name}へ広がった

@@ -401,7 +401,7 @@ export const COMPLETION_TILE_ID = "_completion";
  * 通しで遊んだデータがまだ無いので、ここは要調整。
  */
 export const MAP_STAGES: MapStage[] = [
-  { id: "marunouchi", name: "丸の内", unitLabel: "1棟", gridRadius: 6, capacity: 169 },
+  { id: "marunouchi", name: "丸の内", unitLabel: "1棟", gridRadius: 6, capacity: 100 },
   { id: "tokyo", name: "東京", unitLabel: "1街区", gridRadius: 13, capacity: 520 },
   { id: "japan", name: "日本", unitLabel: "1都市", gridRadius: 30, capacity: 1100 },
   {
