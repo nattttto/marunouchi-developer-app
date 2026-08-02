@@ -56,6 +56,9 @@ const MIN_PENDING_SIZE = 5;
 export type MapTile = {
   /** 事業ID。竣工でできた区画は `COMPLETION_TILE_ID` */
   id: string;
+  /** 置かれたマス。道路を街に沿って通すために使う */
+  gx: number;
+  gy: number;
   /** 建物の左上（論理px） */
   x: number;
   y: number;
@@ -271,7 +274,7 @@ export function buildMapScene(
   const limit = (stage.gridRadius * 2 + 3) ** 2;
   const at = (index: number) => {
     const { gx, gy } = spiralAt(index);
-    return { x: originX + gx * cell, y: originY + gy * cell };
+    return { gx, gy, x: originX + gx * cell, y: originY + gy * cell };
   };
   const nextCell = () => {
     const start = cursor;
@@ -285,12 +288,14 @@ export function buildMapScene(
 
   const tiles: MapTile[] = [];
   for (const id of placements) {
-    const { x, y } = nextCell();
+    const { gx, gy, x, y } = nextCell();
     const { w, h, shadow, stage: growth } = plotOf(id, owned, cell);
     const asset = ASSET_MAP[id];
 
     tiles.push({
       id,
+      gx,
+      gy,
       x: x - w / 2,
       y: y - h / 2,
       w,
