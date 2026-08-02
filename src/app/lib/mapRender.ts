@@ -194,6 +194,15 @@ function drawTexture(
     const dark = shade(color, 0.94);
     px(ctx, x + 1 + (hash & 3), y + 1 + ((hash >> 2) & 3), 1, 1, dark);
     px(ctx, x + Math.floor(w / 2), y + h - 2 - (hash & 1), 1, 1, dark);
+    return;
+  }
+
+  if (char === "=") {
+    // 大通りのセンターライン。破線にして道路だと読めるようにする
+    const line = shade(color, 1.2);
+    for (let dx = 1; dx < w - 1; dx += 3) {
+      px(ctx, x + dx, y + Math.floor(h / 2), 1, 1, line);
+    }
   }
 }
 
@@ -203,12 +212,19 @@ function charColor(char: string, palette: MapPalette): string | null {
   if (char === "*") return palette.park;
   if (char === "B") return palette.landmark;
   if (char === "o") return palette.outland;
+  if (char === "=") return palette.road;
   return null;
 }
 
-/** 陸として扱う文字。緑地も駅も圏外の地方も「海ではない」ので陸に含める */
+/** 陸として扱う文字。緑地も駅も大通りも圏外の地方も「海ではない」ので陸に含める */
 function isLandChar(char: string): boolean {
-  return char === "#" || char === "*" || char === "B" || char === "o";
+  return (
+    char === "#" ||
+    char === "*" ||
+    char === "B" ||
+    char === "o" ||
+    char === "="
+  );
 }
 
 /**
