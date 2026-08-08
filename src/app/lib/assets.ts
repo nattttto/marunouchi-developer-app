@@ -401,7 +401,7 @@ export const MAP_STAGES: MapStage[] = [
   { id: "marunouchi", name: "丸の内", unitLabel: "1棟", gridRadius: 6 },
   { id: "tokyo", name: "東京都", unitLabel: "1街区", gridRadius: 20 },
   { id: "kanto", name: "関東", unitLabel: "1市", gridRadius: 26 },
-  { id: "east-japan", name: "東日本", unitLabel: "1都市", gridRadius: 44 },
+  { id: "east-japan", name: "東日本", unitLabel: "1都市", gridRadius: 35 },
   { id: "japan", name: "日本", unitLabel: "1都市", gridRadius: 60 },
   { id: "world", name: "世界", unitLabel: "1都市", gridRadius: 76 },
 ];

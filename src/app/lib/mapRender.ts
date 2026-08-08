@@ -194,6 +194,15 @@ function drawTexture(
     const dark = shade(color, 0.94);
     px(ctx, x + 1 + (hash & 3), y + 1 + ((hash >> 2) & 3), 1, 1, dark);
     px(ctx, x + Math.floor(w / 2), y + h - 2 - (hash & 1), 1, 1, dark);
+    return;
+  }
+
+  if (char === "=") {
+    // 大通りのセンターライン。破線にして道路だと読めるようにする
+    const line = shade(color, 1.2);
+    for (let dx = 1; dx < w - 1; dx += 3) {
+      px(ctx, x + dx, y + Math.floor(h / 2), 1, 1, line);
+    }
   }
 }
 
@@ -203,12 +212,19 @@ function charColor(char: string, palette: MapPalette): string | null {
   if (char === "*") return palette.park;
   if (char === "B") return palette.landmark;
   if (char === "o") return palette.outland;
+  if (char === "=") return palette.road;
   return null;
 }
 
-/** 陸として扱う文字。緑地も駅も圏外の地方も「海ではない」ので陸に含める */
+/** 陸として扱う文字。緑地も駅も大通りも圏外の地方も「海ではない」ので陸に含める */
 function isLandChar(char: string): boolean {
-  return char === "#" || char === "*" || char === "B" || char === "o";
+  return (
+    char === "#" ||
+    char === "*" ||
+    char === "B" ||
+    char === "o" ||
+    char === "="
+  );
 }
 
 /**
@@ -285,34 +301,58 @@ function drawGround(
   drawTerrain(ctx, scene, palette, sea);
 }
 
+/**
+ * 道路。**街のあるマスにだけ通す。**
+ *
+ * 以前は画面全体に等間隔で引いていたが、それだと方眼紙の上に建物が
+ * 散らばっているようにしか見えなかった。区画が置かれたマスの境目にだけ引くと、
+ * 道路網が街と一緒に伸びていくので「街を造っている」ように読める。
+ *
+ * 道路は `MAP_ROAD_EVERY` マスごとの境目に来る。各マスの北辺と西辺だけを見れば、
+ * 隣り合うマスが互いの続きを描くので、結果として格子が繋がる。
+ */
 function drawRoads(
   ctx: CanvasRenderingContext2D,
   scene: MapScene,
   palette: MapPalette
 ): void {
-  const step = scene.cell * MAP_ROAD_EVERY;
   // 1マスが小さいと道路だけで画面が埋まるので、その段階では引かない
-  if (step < 6) return;
+  if (scene.cell * MAP_ROAD_EVERY < 6) return;
 
   const thickness = scene.cell >= 6 ? 2 : 1;
-  const half = Math.floor(thickness / 2);
+  const cell = scene.cell;
+  // 負の座標でも周期が崩れないよう、剰余を正に寄せる
+  const onRoad = (v: number) =>
+    ((v % MAP_ROAD_EVERY) + MAP_ROAD_EVERY) % MAP_ROAD_EVERY === 0;
 
-  // マスの中心ではなく**境目**に通す。建物の下敷きになると道路が見えない
-  const offsetX = (scene.originX + scene.cell / 2) % step;
-  const offsetY = (scene.originY + scene.cell / 2) % step;
+  for (const tile of scene.tiles) {
+    const left = scene.originX + (tile.gx - 0.5) * cell;
+    const top = scene.originY + (tile.gy - 0.5) * cell;
 
-  for (let x = offsetX; x < scene.width; x += step) {
-    px(ctx, x - half, 0, thickness, scene.height, palette.road);
-  }
-  for (let y = offsetY; y < scene.height; y += step) {
-    px(ctx, 0, y - half, scene.width, thickness, palette.road);
+    // 交差点で途切れないよう、線は太さぶん長めに引く
+    if (onRoad(tile.gx)) {
+      px(ctx, left, top, thickness, cell + thickness, palette.road);
+    }
+    if (onRoad(tile.gy)) {
+      px(ctx, left, top, cell + thickness, thickness, palette.road);
+    }
   }
 
   if (thickness < 2) return;
+
   // センターライン。破線にして道路だと読めるようにする
-  for (let x = offsetX; x < scene.width; x += step) {
-    for (let y = 1; y < scene.height; y += 4) {
-      px(ctx, x, y, 1, 2, palette.roadLine);
+  for (const tile of scene.tiles) {
+    const left = scene.originX + (tile.gx - 0.5) * cell;
+    const top = scene.originY + (tile.gy - 0.5) * cell;
+    if (onRoad(tile.gx)) {
+      for (let y = top + 1; y < top + cell; y += 3) {
+        px(ctx, left, y, 1, 1, palette.roadLine);
+      }
+    }
+    if (onRoad(tile.gy)) {
+      for (let x = left + 1; x < left + cell; x += 3) {
+        px(ctx, x, top, 1, 1, palette.roadLine);
+      }
     }
   }
 }

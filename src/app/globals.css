@@ -16,7 +16,7 @@
   --color-ground: #cfc3ae;
 
   /* マップの描画用。canvas からは getComputedStyle で読むので、色はここに集約したまま */
-  --color-road: #b9ad97;
+  --color-road: #ada08a;
   --color-road-line: #e4dbc8;
   /* 建物が落とす影。見下ろしでは影の長さだけが高さを伝える */
   --color-plot-shadow: #a99c86;
